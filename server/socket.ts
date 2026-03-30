@@ -174,14 +174,10 @@ export function registerSocketHandlers(
 
       if (room.allAnswersMatched()) {
         // All answers revealed — round is over
+        room.clearGuessTimer();
         endRound(io, room);
       } else {
-        const outcome = room.advanceGuesser();
-        if (outcome === "round_end" || room.allAnswersMatched()) {
-          endRound(io, room);
-        } else {
-          io.to(room.code).emit("phase_change", room.toClientState());
-        }
+        advanceTurnOrEndRound(io, room, gameManager);
       }
     });
 
@@ -191,12 +187,7 @@ export function registerSocketHandlers(
       if (!room || room.phase !== "guessing") return;
       if (room.getCurrentGuesser() !== socket.id) return;
 
-      const outcome = room.advanceGuesser();
-      if (outcome === "round_end" || room.allAnswersMatched()) {
-        endRound(io, room);
-      } else {
-        io.to(room.code).emit("phase_change", room.toClientState());
-      }
+      advanceTurnOrEndRound(io, room, gameManager);
     });
 
     // ─── next_round ────────────────────────────────────────────────────────────
@@ -336,8 +327,25 @@ async function generateAndSubmitBotAnswers(io: TypedServer, room: GameRoom, game
 
 function startGuessingPhase(io: TypedServer, room: GameRoom, gameManager: GameManager): void {
   room.startGuessingPhase();
+  room.setGuessTimer(() => {
+    if (room.phase === "guessing") advanceTurnOrEndRound(io, room, gameManager);
+  });
   io.to(room.code).emit("phase_change", room.toClientState());
   prefetchNextQuestion(gameManager, room); // fire-and-forget
+}
+
+/** Advance to the next guesser (resetting the per-turn timer), or end the round. */
+function advanceTurnOrEndRound(io: TypedServer, room: GameRoom, gameManager: GameManager): void {
+  room.clearGuessTimer();
+  const outcome = room.advanceGuesser();
+  if (outcome === "round_end" || room.allAnswersMatched()) {
+    endRound(io, room);
+  } else {
+    room.setGuessTimer(() => {
+      if (room.phase === "guessing") advanceTurnOrEndRound(io, room, gameManager);
+    });
+    io.to(room.code).emit("phase_change", room.toClientState());
+  }
 }
 
 // Pre-generate the next round's question during the guessing phase so next_round is instant.
@@ -364,6 +372,7 @@ async function prefetchNextQuestion(gameManager: GameManager, room: GameRoom): P
 }
 
 function endRound(io: TypedServer, room: GameRoom): void {
+  room.clearGuessTimer();
   room.phase = "round_end";
   io.to(room.code).emit("round_end", {
     state: room.toClientState(),

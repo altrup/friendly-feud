@@ -69,6 +69,11 @@ export class GameRoom {
   /** Unix ms timestamp when the answering phase ends; null outside answering phase */
   answerDeadline: number | null = null;
 
+  /** Server-side timer for the current guesser's turn (30s per turn) */
+  private guessTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Unix ms timestamp when the current guesser's turn ends; null outside guessing phase */
+  guessDeadline: number | null = null;
+
   /** sessionId → socketId (for reconnection) */
   sessionToSocket: Map<string, string> = new Map();
   /** socketId → sessionId (for disconnect lookup) */
@@ -222,6 +227,7 @@ export class GameRoom {
       clearTimeout(this.answerTimer);
       this.answerTimer = null;
     }
+    this.clearGuessTimer();
     // Reset scores for all players and bots
     for (const id of this.players.keys()) {
       this.scores.set(id, 0);
@@ -266,6 +272,21 @@ export class GameRoom {
       this.answerTimer = null;
     }
     this.answerDeadline = null;
+  }
+
+  /** Set a 30-second timeout for the current guesser's turn. */
+  setGuessTimer(callback: () => void): void {
+    this.clearGuessTimer();
+    this.guessDeadline = Date.now() + 30_000;
+    this.guessTimer = setTimeout(callback, 30_000);
+  }
+
+  clearGuessTimer(): void {
+    if (this.guessTimer !== null) {
+      clearTimeout(this.guessTimer);
+      this.guessTimer = null;
+    }
+    this.guessDeadline = null;
   }
 
   /** Transition to the guessing phase. */
@@ -385,6 +406,7 @@ export class GameRoom {
       answeredPlayerIds: Array.from(this.answers.keys()),
       matchedPlayerIds: Array.from(this.matchedPlayerIds),
       answerDeadline: this.answerDeadline,
+      guessDeadline: this.guessDeadline,
       questionSet: this.questionSet,
     };
   }

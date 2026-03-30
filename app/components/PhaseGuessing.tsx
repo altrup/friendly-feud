@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useGame } from "../context/GameContext.js";
 import { AnswerBoard } from "./AnswerBoard.js";
+import { TimerBorder } from "./TimerBorder.js";
 
 export function PhaseGuessing() {
   const { state, submitGuess, passTurn } = useGame();
   const [guess, setGuess] = useState("");
+  const questionCardRef = useRef<HTMLDivElement>(null);
   // Brief highlight when a guess result comes in
   const [flashResult, setFlashResult] = useState<{
     correct: boolean;
@@ -56,7 +58,14 @@ export function PhaseGuessing() {
   return (
     <div className="flex flex-col gap-6">
       {/* Question */}
-      <div className="bg-game-card rounded-2xl px-6 py-6 text-center">
+      <div ref={questionCardRef} className="relative bg-game-card rounded-2xl px-6 py-6 text-center">
+        <TimerBorder
+          containerRef={questionCardRef}
+          deadline={state.guessDeadline}
+          totalDuration={30}
+          color={isMyTurn ? "var(--color-game-accent)" : "var(--color-game-muted)"}
+          strokeWidth={isMyTurn ? 3 : 1.5}
+        />
         <p className="text-game-muted text-sm uppercase tracking-widest mb-2">
           Round {state.roundNumber} — Guessing
         </p>

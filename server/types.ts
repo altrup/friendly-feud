@@ -40,6 +40,8 @@ export interface ClientGameState {
   matchedPlayerIds: string[];
   /** Unix ms timestamp when the answering phase ends; null outside answering phase */
   answerDeadline: number | null;
+  /** Unix ms timestamp when the current guesser's turn ends; null outside guessing phase */
+  guessDeadline: number | null;
   /** The question set chosen by the host ("all" or a category name) */
   questionSet: string;
 }
