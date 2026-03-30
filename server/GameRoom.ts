@@ -56,6 +56,11 @@ export class GameRoom {
   /** Prompts already generated for this room's custom theme (to avoid repeats) */
   generatedQuestionPrompts: string[] = [];
 
+  /** Pre-generated question for the next round (fetched during the guessing phase) */
+  pendingQuestion: Question | null = null;
+  /** True while a prefetch is in-flight, to prevent duplicate fetches */
+  prefetchingQuestion: boolean = false;
+
   /** Server-side timer for the answering phase timeout */
   private answerTimer: ReturnType<typeof setTimeout> | null = null;
   /** Unix ms timestamp when the answering phase ends; null outside answering phase */

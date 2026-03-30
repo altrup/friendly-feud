@@ -112,7 +112,7 @@ export function registerSocketHandlers(
       // Start a 60-second timer; auto-advance to guessing if time runs out
       room.setAnswerTimer(() => {
         if (room.phase === "answering") {
-          startGuessingPhase(io, room);
+          startGuessingPhase(io, room, gameManager);
         }
       });
 
@@ -133,7 +133,7 @@ export function registerSocketHandlers(
       const allAnswered = room.submitAnswer(socket.id, answer);
 
       if (allAnswered) {
-        startGuessingPhase(io, room);
+        startGuessingPhase(io, room, gameManager);
       } else {
         // Broadcast updated answeredPlayerIds so everyone sees who has answered
         io.to(room.code).emit("phase_change", room.toClientState());
@@ -203,17 +203,24 @@ export function registerSocketHandlers(
         emitGameEnd(io, room);
       } else {
         let question: Question;
-        if (room.questionSet === "custom" && room.customTheme) {
-          question = await gameManager.getCustomQuestion(room.customTheme, room.generatedQuestionPrompts);
-          room.generatedQuestionPrompts.push(question.prompt);
+        if (room.pendingQuestion) {
+          // Use the question pre-generated during the guessing phase — no wait
+          question = room.pendingQuestion;
+          room.pendingQuestion = null;
         } else {
-          question = gameManager.getRandomQuestion(room.usedQuestionIds, room.questionSet);
+          // Prefetch didn't finish in time; generate now as fallback
+          if (room.questionSet === "custom" && room.customTheme) {
+            question = await gameManager.getCustomQuestion(room.customTheme, room.generatedQuestionPrompts);
+            room.generatedQuestionPrompts.push(question.prompt);
+          } else {
+            question = gameManager.getRandomQuestion(room.usedQuestionIds, room.questionSet);
+          }
         }
         room.startAnsweringPhase(question);
 
         room.setAnswerTimer(() => {
           if (room.phase === "answering") {
-            startGuessingPhase(io, room);
+            startGuessingPhase(io, room, gameManager);
           }
         });
 
@@ -253,9 +260,33 @@ export function registerSocketHandlers(
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 
-function startGuessingPhase(io: TypedServer, room: GameRoom): void {
+function startGuessingPhase(io: TypedServer, room: GameRoom, gameManager: GameManager): void {
   room.startGuessingPhase();
   io.to(room.code).emit("phase_change", room.toClientState());
+  prefetchNextQuestion(gameManager, room); // fire-and-forget
+}
+
+// Pre-generate the next round's question during the guessing phase so next_round is instant.
+async function prefetchNextQuestion(gameManager: GameManager, room: GameRoom): Promise<void> {
+  if (room.currentRound >= 3 || room.prefetchingQuestion) return;
+  room.prefetchingQuestion = true;
+  try {
+    let question: Question;
+    if (room.questionSet === "custom" && room.customTheme) {
+      // Snapshot prompts so mutations during the await don't affect deduplication
+      question = await gameManager.getCustomQuestion(room.customTheme, [...room.generatedQuestionPrompts]);
+      // Discard if the round advanced while we were waiting
+      if (room.pendingQuestion === null && room.phase !== "game_end") {
+        room.generatedQuestionPrompts.push(question.prompt);
+        room.pendingQuestion = question;
+      }
+    } else {
+      question = gameManager.getRandomQuestion(room.usedQuestionIds, room.questionSet);
+      room.pendingQuestion = question;
+    }
+  } finally {
+    room.prefetchingQuestion = false;
+  }
 }
 
 function endRound(io: TypedServer, room: GameRoom): void {
