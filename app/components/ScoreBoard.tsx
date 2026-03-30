@@ -8,10 +8,9 @@ interface Props {
   roundScoreDeltas?: Record<string, number> | null;
   /** All guesses from the round, used to show what each player guessed */
   roundGuesses?: { guesserId: string; guess: string; matched: boolean }[] | null;
-  onKickPlayer?: (playerId: string) => void;
 }
 
-export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas, roundGuesses, onKickPlayer }: Props) {
+export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas, roundGuesses }: Props) {
   // Sort by score descending, alphabetical tiebreaker
   const sorted = [...players].sort((a, b) => {
     const scoreDiff = (scores[b.id] ?? 0) - (scores[a.id] ?? 0);
@@ -36,7 +35,6 @@ export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas,
         {sorted.map((player, i) => {
           const delta = roundScoreDeltas?.[player.id];
           const guesses = guessesByPlayer.get(player.id) ?? [];
-          const canKick = onKickPlayer && player.id !== currentPlayerId;
           return (
             <li
               key={player.id}
@@ -98,23 +96,6 @@ export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas,
                 <span className="text-game-gold font-bold text-sm">
                   {scores[player.id] ?? 0}
                 </span>
-                {canKick && (
-                  <button
-                    onClick={() => onKickPlayer(player.id)}
-                    aria-label="Kick player"
-                    className="text-game-muted hover:text-red-400 transition-colors ml-1"
-                  >
-                    <svg
-                      className="w-3.5 h-3.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
               </div>
             </li>
           );

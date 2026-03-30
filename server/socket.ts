@@ -266,7 +266,7 @@ export function registerSocketHandlers(
     // ─── kick_player ──────────────────────────────────────────────────────────
     socket.on("kick_player", ({ playerId }) => {
       const room = gameManager.getRoomBySocketId(socket.id);
-      if (!room || room.hostId !== socket.id) return;
+      if (!room || room.hostId !== socket.id || room.phase !== "waiting") return;
       if (playerId === socket.id) return; // host cannot kick themselves
       handlePlayerLeave(io, room, playerId, gameManager);
       // Notify the kicked player so they can redirect to home

@@ -15,7 +15,7 @@ export function meta() {
 }
 
 export default function GameRoute() {
-  const { state, leaveGame, kickPlayer } = useGame();
+  const { state, leaveGame } = useGame();
   const navigate = useNavigate();
 
   // SSR guard
@@ -50,7 +50,6 @@ export default function GameRoute() {
             players={state.players}
             scores={state.scores}
             currentPlayerId={state.mySocketId}
-            onKickPlayer={state.hostId === state.mySocketId ? kickPlayer : undefined}
           />
         </aside>
       )}
