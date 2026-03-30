@@ -92,7 +92,7 @@ export class GameManager {
             role: "user",
             content:
               `Generate a single Family Feud-style question on the theme "${theme}". ` +
-              `Rules: direct it at the player using "you" (e.g. "Name something you'd bring ..."), ` +
+              `Rules: direct it at the player using "you" (e.g. "Name something you..."), ` +
               `it should invite many different answers, keep it fun and conversational, ` +
               `and return ONLY the question text with no extra commentary.` +
               avoidSection,
