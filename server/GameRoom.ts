@@ -47,6 +47,9 @@ export class GameRoom {
   /** Questions used in this game session (to avoid repeats) */
   usedQuestionIds: Set<string> = new Set();
 
+  /** IDs of bot players (excluded from guesser rotation; their answers are auto-generated) */
+  botIds: Set<string> = new Set();
+
   /** The question set chosen by the host ("all", a category name, or "custom") */
   questionSet: string = "all";
 
@@ -85,6 +88,27 @@ export class GameRoom {
     this.players.set(socketId, { id: socketId, name, isHost });
     this.playerOrder.push(socketId);
     this.scores.set(socketId, 0);
+  }
+
+  addBot(botId: string, name: string, personality: string): void {
+    this.players.set(botId, { id: botId, name, isHost: false, isBot: true, botPersonality: personality });
+    // Bots are NOT added to playerOrder — they answer but don't guess
+    this.botIds.add(botId);
+    this.scores.set(botId, 0);
+  }
+
+  removeBot(botId: string): void {
+    this.players.delete(botId);
+    this.botIds.delete(botId);
+    this.scores.delete(botId);
+    this.answers.delete(botId);
+  }
+
+  updateBotPersonality(botId: string, personality: string): void {
+    const bot = this.players.get(botId);
+    if (bot && bot.isBot) {
+      this.players.set(botId, { ...bot, botPersonality: personality });
+    }
   }
 
   removePlayer(socketId: string): void {
@@ -199,7 +223,7 @@ export class GameRoom {
   submitAnswer(socketId: string, answer: string): boolean {
     if (this.phase !== "answering") return false;
     this.answers.set(socketId, answer.trim());
-    return this.answers.size >= this.playerOrder.length;
+    return this.answers.size >= this.playerOrder.length + this.botIds.size;
   }
 
   /** Set the 60-second timeout for the answering phase. Stored so it can be cancelled early. */
@@ -293,7 +317,8 @@ export class GameRoom {
 
   /** Check whether all answers have been successfully matched. */
   allAnswersMatched(): boolean {
-    return this.matchedPlayerIds.size >= this.playerOrder.length;
+    // Only count players who actually submitted an answer (bots may not have if phase advanced early)
+    return this.matchedPlayerIds.size >= this.answers.size;
   }
 
   // ─── Round / game advancement ────────────────────────────────────────────────

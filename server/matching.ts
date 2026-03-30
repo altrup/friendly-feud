@@ -2,6 +2,8 @@
 // Basic: case-insensitive, whitespace-trimmed string equality.
 // AI path: calls Claude API for semantic similarity (opt-in via USE_AI_MATCHING=true in .env).
 
+import { checkGuessMatch } from "./claude.js";
+
 /** Normalize a string for comparison: trim and lowercase. */
 export function normalize(str: string): string {
   return str.trim().toLowerCase();
@@ -60,32 +62,13 @@ export function matchGuess(
  */
 async function aiMatch(question: string, guess: string, answer: string): Promise<boolean> {
   try {
-    // Dynamic import so the Anthropic SDK is only loaded when needed
-    // @ts-ignore — optional dependency, only required when USE_AI_MATCHING=true
-    const Anthropic = (await import("@anthropic-ai/sdk")).default;
-    const client = new Anthropic();
-
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 10,
-      messages: [
-        {
-          role: "user",
-          content: `Are these semantically equivalent for Family Feud? Ignore typos, different grammatical forms (e.g., "gaming" vs "play games"), and allow broad synonyms or categories (e.g., "mobile device" vs "phone"). Answer only "yes" or "no".\nQuestion: "${question}"\nAnswer 1: "${answer}"\nAnswer 2: "${guess}"`,
-        },
-      ],
-    });
-
-    const text =
-      response.content[0].type === "text"
-        ? response.content[0].text.toLowerCase().trim()
-        : "";
-    return text.startsWith("yes");
+    const result = await checkGuessMatch(question, guess, answer);
+    if (result !== null) return result;
   } catch (e) {
     console.log(e);
-    // If AI is unavailable, fall back to basic matching
-    return basicMatch(guess, answer);
   }
+  // If AI is unavailable, fall back to basic matching
+  return basicMatch(guess, answer);
 }
 
 /**

@@ -13,6 +13,8 @@ export interface Player {
   id: string; // socket ID
   name: string;
   isHost: boolean;
+  isBot?: boolean;
+  botPersonality?: string;
 }
 
 export interface Question {
@@ -95,4 +97,7 @@ export interface ClientToServerEvents {
   submit_guess: (data: { guess: string; targetPlayerId?: string }) => void;
   next_round: () => void;
   pass_turn: () => void;
+  add_bot: (data: { name: string; personality: string }) => void;
+  remove_bot: (data: { botId: string }) => void;
+  update_bot_personality: (data: { botId: string; personality: string }) => void;
 }

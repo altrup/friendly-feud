@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useGame } from "../context/GameContext.js";
 import { PlayerList } from "../components/PlayerList.js";
+import DEFAULT_BOTS from "../data/defaultBots.json";
 
 export function meta() {
   return [{ title: "Friendly Feud | Lobby" }];
@@ -9,7 +10,7 @@ export function meta() {
 
 export default function LobbyRoute() {
   const { code } = useParams<{ code: string }>();
-  const { state, startGame, leaveGame } = useGame();
+  const { state, startGame, leaveGame, addBot, removeBot, updateBotPersonality } = useGame();
   const navigate = useNavigate();
 
   // SSR guard: socket is browser-only
@@ -77,6 +78,7 @@ export default function LobbyRoute() {
   const isHost = state.hostId === state.mySocketId;
   const canStart = state.players.length >= 2;
 
+
   const CATEGORY_META: Record<string, { emoji: string; label: string }> = {
     all:           { emoji: "🎲", label: "All" },
     "daily-life":  { emoji: "🏠", label: "Daily Life" },
@@ -113,7 +115,25 @@ export default function LobbyRoute() {
         <PlayerList
           players={state.players}
           currentPlayerId={state.mySocketId}
+          isHost={isHost}
+          onRemoveBot={isHost ? removeBot : undefined}
+          onUpdateBotPersonality={isHost ? updateBotPersonality : undefined}
         />
+        {/* Add bot button — host only, lobby only */}
+        {isHost && (
+          <button
+            onClick={() => {
+              const bots = DEFAULT_BOTS;
+              const botCount = state.players.filter((p) => p.isBot).length;
+              const { name, personality } = bots[botCount % bots.length];
+              addBot(name, personality);
+            }}
+            className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-dashed border-game-border text-game-muted hover:border-game-accent hover:text-game-text text-sm transition-colors"
+          >
+            <span className="text-lg leading-none">+</span>
+            Add Bot
+          </button>
+        )}
       </div>
 
       {/* Start controls (host only) */}

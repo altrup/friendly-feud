@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { join, dirname, basename } from "path";
 import { GameRoom } from "./GameRoom.js";
 import type { Question } from "./types.js";
+import { generateCustomQuestion, generateBotAnswer } from "./claude.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -76,37 +77,7 @@ export class GameManager {
     previousPrompts: string[],
   ): Promise<Question> {
     try {
-      const Anthropic = (await import("@anthropic-ai/sdk")).default;
-      const client = new Anthropic();
-
-      const avoidSection =
-        previousPrompts.length > 0
-          ? `\n\nDo NOT repeat any of these already-used questions:\n${previousPrompts.map((p) => `- ${p}`).join("\n")}`
-          : "";
-
-      const response = await client.messages.create({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 60,
-        messages: [
-          {
-            role: "user",
-            content:
-              `Generate a single Family Feud-style question on the theme "${theme}". ` +
-              `Rules: direct it at the player using "you" (e.g. "Name a reason you...", ` +
-              `"What's something you...", "Name a place where you...", "Name something you...", etc). ` +
-              `Vary the phrasing each time; don't use the same phrase. ` +
-              `It should invite many different answers, keep it fun and conversational, ` +
-              `and return ONLY the question text with no extra commentary.` +
-              avoidSection,
-          },
-        ],
-      });
-
-      const prompt =
-        response.content[0].type === "text"
-          ? response.content[0].text.trim()
-          : null;
-
+      const prompt = await generateCustomQuestion(theme, previousPrompts);
       if (prompt) {
         return { id: `custom-${Date.now()}`, prompt, category: theme };
       }
@@ -133,6 +104,17 @@ export class GameManager {
       return pool[Math.floor(Math.random() * pool.length)];
     }
     return available[Math.floor(Math.random() * available.length)];
+  }
+
+  /** Generate an answer for a bot player given a question and personality. */
+  async getBotAnswer(question: Question, personality: string): Promise<string> {
+    try {
+      const answer = await generateBotAnswer(question, personality);
+      if (answer) return answer;
+    } catch (e) {
+      console.error("Bot answer generation failed:", e);
+    }
+    return "I don't know";
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────

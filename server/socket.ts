@@ -110,6 +110,7 @@ export function registerSocketHandlers(
         question = gameManager.getRandomQuestion(room.usedQuestionIds, room.questionSet);
       }
       room.startAnsweringPhase(question);
+      generateAndSubmitBotAnswers(io, room, gameManager); // fire-and-forget
 
       // Start a 60-second timer; auto-advance to guessing if time runs out
       room.setAnswerTimer(() => {
@@ -219,6 +220,7 @@ export function registerSocketHandlers(
           }
         }
         room.startAnsweringPhase(question);
+        generateAndSubmitBotAnswers(io, room, gameManager); // fire-and-forget
 
         room.setAnswerTimer(() => {
           if (room.phase === "answering") {
@@ -228,6 +230,31 @@ export function registerSocketHandlers(
 
         io.to(room.code).emit("phase_change", room.toClientState());
       }
+    });
+
+    // ─── add_bot ──────────────────────────────────────────────────────────────
+    socket.on("add_bot", ({ name, personality }) => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room || room.hostId !== socket.id || room.phase !== "waiting") return;
+      const botId = `bot-${randomUUID()}`;
+      room.addBot(botId, name, personality);
+      io.to(room.code).emit("lobby_update", room.toClientState());
+    });
+
+    // ─── remove_bot ───────────────────────────────────────────────────────────
+    socket.on("remove_bot", ({ botId }) => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room || room.hostId !== socket.id || room.phase !== "waiting") return;
+      room.removeBot(botId);
+      io.to(room.code).emit("lobby_update", room.toClientState());
+    });
+
+    // ─── update_bot_personality ───────────────────────────────────────────────
+    socket.on("update_bot_personality", ({ botId, personality }) => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room || room.hostId !== socket.id || room.phase !== "waiting") return;
+      room.updateBotPersonality(botId, personality);
+      io.to(room.code).emit("lobby_update", room.toClientState());
     });
 
     // ─── leave_game ───────────────────────────────────────────────────────────
@@ -261,6 +288,27 @@ export function registerSocketHandlers(
 }
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
+
+// Auto-generate and submit answers for all bots when the answering phase begins.
+// Fire-and-forget; guards prevent late arrivals from disrupting a phase that has already advanced.
+async function generateAndSubmitBotAnswers(io: TypedServer, room: GameRoom, gameManager: GameManager): Promise<void> {
+  if (!room.currentQuestion || room.botIds.size === 0) return;
+  const question = room.currentQuestion;
+
+  await Promise.all(
+    Array.from(room.botIds).map(async (botId) => {
+      const bot = room.players.get(botId);
+      if (!bot) return;
+      const answer = await gameManager.getBotAnswer(question, bot.botPersonality ?? "");
+      if (room.phase !== "answering" || room.currentQuestion?.id !== question.id) return;
+      const allAnswered = room.submitAnswer(botId, answer);
+      io.to(room.code).emit("phase_change", room.toClientState());
+      if (allAnswered) {
+        startGuessingPhase(io, room, gameManager);
+      }
+    })
+  );
+}
 
 function startGuessingPhase(io: TypedServer, room: GameRoom, gameManager: GameManager): void {
   room.startGuessingPhase();

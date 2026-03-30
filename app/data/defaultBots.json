@@ -1,0 +1,7 @@
+[
+  { "name": "Sunny",  "personality": "Overly enthusiastic and positive about everything" },
+  { "name": "Grumps", "personality": "Grumpy and pessimistic, always expecting the worst" },
+  { "name": "Sage",   "personality": "A philosopher who overthinks every simple question" },
+  { "name": "Pip",    "personality": "An excitable 5-year-old with simple, innocent answers" },
+  { "name": "Pops",   "personality": "A dad who can't resist making puns and dad jokes" }
+]

@@ -83,6 +83,9 @@ interface GameContextValue {
   nextRound: () => void;
   passTurn: () => void;
   clearError: () => void;
+  addBot: (name: string, personality: string) => void;
+  removeBot: (botId: string) => void;
+  updateBotPersonality: (botId: string, personality: string) => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -354,6 +357,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
+  const addBot = useCallback(
+    (name: string, personality: string) => {
+      socket.emit("add_bot", { name, personality });
+    },
+    [socket]
+  );
+
+  const removeBot = useCallback(
+    (botId: string) => {
+      socket.emit("remove_bot", { botId });
+    },
+    [socket]
+  );
+
+  const updateBotPersonality = useCallback(
+    (botId: string, personality: string) => {
+      socket.emit("update_bot_personality", { botId, personality });
+    },
+    [socket]
+  );
+
   return (
     <GameContext.Provider
       value={{
@@ -367,6 +391,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         nextRound,
         passTurn,
         clearError,
+        addBot,
+        removeBot,
+        updateBotPersonality,
       }}
     >
       {children}
