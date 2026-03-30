@@ -75,7 +75,6 @@ async function aiMatch(question: string, guess: string, answer: string): Promise
         },
       ],
     });
-    console.log("HEY", `Are these semantically equivalent for Family Feud? Ignore typos, different grammatical forms (e.g., "gaming" vs "play games"), and allow broad synonyms or categories (e.g., "mobile device" vs "phone"). Answer only "yes" or "no".\nQuestion: "${question}"\nAnswer 1: "${answer}"\nAnswer 2: "${guess}"`);
 
     const text =
       response.content[0].type === "text"
