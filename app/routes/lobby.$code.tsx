@@ -207,11 +207,6 @@ export default function LobbyRoute() {
                 Need at least 2 players to start.
               </p>
             )}
-            {canStart && selectedQuestionSet === "custom" && !customTheme.trim() && (
-              <p className="text-game-muted text-sm">
-                Enter a theme to start.
-              </p>
-            )}
           </>
         ) : (
           <p className="text-game-muted animate-pulse">
