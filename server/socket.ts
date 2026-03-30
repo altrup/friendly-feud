@@ -80,7 +80,7 @@ export function registerSocketHandlers(
     });
 
     // ─── start_game ────────────────────────────────────────────────────────────
-    socket.on("start_game", () => {
+    socket.on("start_game", ({ questionSet }) => {
       const room = gameManager.getRoomBySocketId(socket.id);
       if (!room) return;
       if (room.hostId !== socket.id) {
@@ -96,7 +96,8 @@ export function registerSocketHandlers(
         return;
       }
 
-      const question = gameManager.getRandomQuestion(room.usedQuestionIds);
+      room.questionSet = questionSet ?? "all";
+      const question = gameManager.getRandomQuestion(room.usedQuestionIds, room.questionSet);
       room.startAnsweringPhase(question);
 
       // Start a 60-second timer; auto-advance to guessing if time runs out
@@ -192,7 +193,7 @@ export function registerSocketHandlers(
       if (outcome === "game_end") {
         emitGameEnd(io, room);
       } else {
-        const question = gameManager.getRandomQuestion(room.usedQuestionIds);
+        const question = gameManager.getRandomQuestion(room.usedQuestionIds, room.questionSet);
         room.startAnsweringPhase(question);
 
         room.setAnswerTimer(() => {

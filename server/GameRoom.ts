@@ -47,6 +47,9 @@ export class GameRoom {
   /** Questions used in this game session (to avoid repeats) */
   usedQuestionIds: Set<string> = new Set();
 
+  /** The question set chosen by the host ("all" or a category name) */
+  questionSet: string = "all";
+
   /** Server-side timer for the answering phase timeout */
   private answerTimer: ReturnType<typeof setTimeout> | null = null;
   /** Unix ms timestamp when the answering phase ends; null outside answering phase */
@@ -326,6 +329,7 @@ export class GameRoom {
       answeredPlayerIds: Array.from(this.answers.keys()),
       matchedPlayerIds: Array.from(this.matchedPlayerIds),
       answerDeadline: this.answerDeadline,
+      questionSet: this.questionSet,
     };
   }
 

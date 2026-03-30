@@ -37,6 +37,8 @@ export interface ClientGameState {
   matchedPlayerIds: string[];
   /** Unix ms timestamp when the answering phase ends; null outside answering phase */
   answerDeadline: number | null;
+  /** The question set chosen by the host ("all" or a category name) */
+  questionSet: string;
 }
 
 // ─── Socket Event Payload Types ───────────────────────────────────────────────
@@ -86,7 +88,7 @@ export interface ClientToServerEvents {
   join_lobby: (data: { code: string; playerName: string }) => void;
   rejoin_session: (data: { sessionId: string; roomCode: string }) => void;
   leave_game: () => void;
-  start_game: () => void;
+  start_game: (data: { questionSet: string }) => void;
   submit_answer: (data: { answer: string }) => void;
   /** targetPlayerId is optional for MVP — server matches against all unguessed answers */
   submit_guess: (data: { guess: string; targetPlayerId?: string }) => void;

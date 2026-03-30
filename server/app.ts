@@ -24,6 +24,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Return the list of available question set categories
+app.get("/api/categories", (_req, res) => {
+  res.json({ categories: gameManager.categoryNames });
+});
+
 app.use(
   createRequestHandler({
     build: () => import("virtual:react-router/server-build"),

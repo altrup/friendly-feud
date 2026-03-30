@@ -1,9 +1,9 @@
 // GameManager is a singleton that manages all active game rooms.
 // It is instantiated once and persisted via globalThis to survive Vite HMR reloads.
 
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { fileURLToPath } from "url";
-import { join, dirname } from "path";
+import { join, dirname, basename } from "path";
 import { GameRoom } from "./GameRoom.js";
 import type { Question } from "./types.js";
 
@@ -11,12 +11,27 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export class GameManager {
   private rooms: Map<string, GameRoom> = new Map();
-  private questions: Question[];
+  private questionsByCategory: Map<string, Question[]> = new Map();
+  private allQuestions: Question[] = [];
 
   constructor() {
-    // Load questions once at startup
-    const questionsPath = join(__dirname, "data", "questions.json");
-    this.questions = JSON.parse(readFileSync(questionsPath, "utf-8")) as Question[];
+    // Load all category JSON files from data/categories/ at startup
+    const categoriesDir = join(__dirname, "data", "categories");
+    const files = readdirSync(categoriesDir).filter((f) => f.endsWith(".json"));
+
+    for (const file of files) {
+      const categoryKey = basename(file, ".json");
+      const questions = JSON.parse(
+        readFileSync(join(categoriesDir, file), "utf-8")
+      ) as Question[];
+      this.questionsByCategory.set(categoryKey, questions);
+      this.allQuestions.push(...questions);
+    }
+  }
+
+  /** Sorted list of available category keys (file names without .json). */
+  get categoryNames(): string[] {
+    return Array.from(this.questionsByCategory.keys()).sort();
   }
 
   // ─── Room management ────────────────────────────────────────────────────────
@@ -51,12 +66,17 @@ export class GameManager {
 
   // ─── Question selection ──────────────────────────────────────────────────────
 
-  /** Pick a random question that hasn't been used yet in this room's session. */
-  getRandomQuestion(usedIds: Set<string>): Question {
-    const available = this.questions.filter((q) => !usedIds.has(q.id));
+  /** Pick a random question from the given set that hasn't been used yet. */
+  getRandomQuestion(usedIds: Set<string>, questionSet: string): Question {
+    const pool =
+      questionSet === "all"
+        ? this.allQuestions
+        : (this.questionsByCategory.get(questionSet) ?? this.allQuestions);
+
+    const available = pool.filter((q) => !usedIds.has(q.id));
     if (available.length === 0) {
-      // If all questions are exhausted, reset and reuse (unlikely with 20 questions / 3 rounds)
-      return this.questions[Math.floor(Math.random() * this.questions.length)];
+      // All questions in this set exhausted — reset and reuse
+      return pool[Math.floor(Math.random() * pool.length)];
     }
     return available[Math.floor(Math.random() * available.length)];
   }
