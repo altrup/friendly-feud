@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useGame } from "../context/GameContext.js";
 import { PlayerList } from "../components/PlayerList.js";
@@ -19,6 +19,16 @@ export default function LobbyRoute() {
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedQuestionSet, setSelectedQuestionSet] = useState("all");
   const [customTheme, setCustomTheme] = useState("");
+  const customThemePlaceholder = "Enter a custom theme…";
+  const inputMirrorRef = useRef<HTMLSpanElement>(null);
+  const [inputWidth, setInputWidth] = useState<number | null>(null);
+
+  // Re-measure whenever the text changes so the input tracks actual rendered width
+  useEffect(() => {
+    if (inputMirrorRef.current) {
+      setInputWidth(inputMirrorRef.current.offsetWidth);
+    }
+  }, [customTheme, mounted]);
 
   // Fetch available categories from the server
   useEffect(() => {
@@ -63,7 +73,7 @@ export default function LobbyRoute() {
     technology:    { emoji: "💻", label: "Technology" },
     travel:        { emoji: "✈️", label: "Travel" },
     work:          { emoji: "💼", label: "Work" },
-    custom:        { emoji: "🪄", label: "Custom" },
+    custom:        { emoji: "🪄", label: "" },
   };
 
   return (
@@ -102,15 +112,15 @@ export default function LobbyRoute() {
                 Question Set
               </p>
               <div className="flex flex-wrap justify-center gap-2 max-w-sm">
-                {/* "All" first, then categories, then "Custom" last */}
-                {[{ key: "all" }, ...categories.map((c) => ({ key: c })), { key: "custom" }].map(({ key }) => {
+                {/* "All" first, then categories, then "Custom" (with inline theme input) last */}
+                {[{ key: "all" }, ...categories.map((c) => ({ key: c }))].map(({ key }) => {
                   const meta = CATEGORY_META[key] ?? { emoji: "❓", label: key };
                   const selected = selectedQuestionSet === key;
                   return (
                     <button
                       key={key}
                       onClick={() => setSelectedQuestionSet(key)}
-                      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                      className={`flex flex-col items-center justify-evenly px-3 py-2 h-16 rounded-xl border text-sm font-medium transition-colors ${
                         selected
                           ? "bg-game-accent/20 border-game-accent text-game-text"
                           : "bg-game-surface border-game-border text-game-muted hover:border-game-accent hover:text-game-text"
@@ -121,19 +131,50 @@ export default function LobbyRoute() {
                     </button>
                   );
                 })}
+                {/* Custom button + inline theme input — label ties them together so clicking the button text focuses the input */}
+                {(() => {
+                  const selected = selectedQuestionSet === "custom";
+                  const meta = CATEGORY_META["custom"] ?? { emoji: "❓", label: "Custom" };
+                  return (
+                    <label
+                      htmlFor="custom-theme-input"
+                      onClick={() => setSelectedQuestionSet("custom")}
+                      className={`flex items-center gap-2 px-3 py-2 h-14 rounded-xl border text-sm font-medium transition-colors cursor-pointer ${
+                        selected
+                          ? "bg-game-accent/20 border-game-accent text-game-text"
+                          : "bg-game-surface border-game-border text-game-muted hover:border-game-accent hover:text-game-text"
+                      }`}
+                    >
+                      {/* Hidden span mirrors input text to measure actual rendered width for proportional fonts */}
+                      <span
+                        ref={inputMirrorRef}
+                        aria-hidden
+                        className="fixed top-0 left-0 invisible pointer-events-none whitespace-pre text-sm"
+                        style={{ fontFamily: "inherit" }}
+                      >
+                        {customTheme || customThemePlaceholder}
+                      </span>
+                      <span className="text-xl leading-none">{meta.emoji}</span>
+                      <input
+                        id="custom-theme-input"
+                        type="text"
+                        value={customTheme}
+                        onFocus={() => setSelectedQuestionSet("custom")}
+                        onChange={(e) => setCustomTheme(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                        placeholder={customThemePlaceholder}
+                        style={{
+                          width: inputWidth != null ? inputWidth + 8 : undefined,
+                          maxWidth: "24rem",
+                          transition: "width 0.15s ease",
+                        }}
+                        className="bg-transparent border-none outline-none text-game-text placeholder:text-game-muted text-sm text-center"
+                      />
+                    </label>
+                  );
+                })()}
               </div>
             </div>
-
-            {/* Theme input — only shown when custom mode is selected */}
-            {selectedQuestionSet === "custom" && (
-              <input
-                type="text"
-                value={customTheme}
-                onChange={(e) => setCustomTheme(e.target.value)}
-                placeholder="Enter a theme (e.g. camping, 90s movies…)"
-                className="w-full max-w-sm bg-game-surface border border-game-border text-game-text placeholder:text-game-muted rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-game-accent"
-              />
-            )}
 
             <button
               onClick={() => startGame(selectedQuestionSet, selectedQuestionSet === "custom" ? customTheme : undefined)}
