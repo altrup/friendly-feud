@@ -263,6 +263,16 @@ export function registerSocketHandlers(
       io.to(room.code).emit("lobby_update", room.toClientState());
     });
 
+    // ─── kick_player ──────────────────────────────────────────────────────────
+    socket.on("kick_player", ({ playerId }) => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room || room.hostId !== socket.id) return;
+      if (playerId === socket.id) return; // host cannot kick themselves
+      handlePlayerLeave(io, room, playerId, gameManager);
+      // Notify the kicked player so they can redirect to home
+      io.to(playerId).emit("kicked");
+    });
+
     // ─── leave_game ───────────────────────────────────────────────────────────
     socket.on("leave_game", () => {
       const room = gameManager.getRoomBySocketId(socket.id);

@@ -9,7 +9,7 @@ export function meta() {
 
 export default function LobbyRoute() {
   const { code } = useParams<{ code: string }>();
-  const { state, startGame, leaveGame, addBot, removeBot, updateBotPersonality } = useGame();
+  const { state, startGame, leaveGame, addBot, removeBot, updateBotPersonality, kickPlayer } = useGame();
   const navigate = useNavigate();
 
   // SSR guard: socket is browser-only
@@ -117,6 +117,7 @@ export default function LobbyRoute() {
           isHost={isHost}
           onRemoveBot={isHost ? removeBot : undefined}
           onUpdateBotPersonality={isHost ? updateBotPersonality : undefined}
+          onKickPlayer={isHost ? kickPlayer : undefined}
         />
         {/* Add bot button — host only, lobby only */}
         {isHost && (

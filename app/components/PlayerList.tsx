@@ -8,6 +8,7 @@ interface Props {
   isHost?: boolean;
   onRemoveBot?: (botId: string) => void;
   onUpdateBotPersonality?: (botId: string, personality: string) => void;
+  onKickPlayer?: (playerId: string) => void;
 }
 
 export function PlayerList({
@@ -17,6 +18,7 @@ export function PlayerList({
   isHost,
   onRemoveBot,
   onUpdateBotPersonality,
+  onKickPlayer,
 }: Props) {
   const [expandedBots, setExpandedBots] = useState<Set<string>>(new Set());
   // Track pending edits locally so the input doesn't wait for a round-trip
@@ -54,18 +56,19 @@ export function PlayerList({
         const isExpanded = expandedBots.has(player.id);
         const personality =
           pendingPersonalities[player.id] ?? player.botPersonality ?? "";
+        // Host can expand bots to edit personality; non-host can also expand bots to view
+        const canExpand = player.isBot;
+        const canKick = isHost && player.id !== currentPlayerId;
 
         return (
-          <div className="bg-game-card rounded-lg flex-1">
+          <div key={player.id} className="bg-game-card rounded-lg flex-1">
             {/* Main row */}
-
             <li
-              key={player.id}
-              className={`flex items-center gap-2 -ml-5 ${player.isBot ? "cursor-pointer" : ""}`}
-              onClick={player.isBot ? () => toggleBot(player.id) : undefined}
+              className={`flex items-center gap-2 -ml-5 ${canExpand && isHost ? "cursor-pointer" : ""}`}
+              onClick={canExpand && isHost ? () => toggleBot(player.id) : undefined}
             >
               <div className="w-3 flex-shrink-0 flex items-center justify-center">
-                {player.isBot && (
+                {player.isBot && isHost && (
                   <svg
                     className={`w-3 h-3 text-game-muted transition-transform ${isExpanded ? "rotate-90" : ""}`}
                     fill="none"
@@ -81,9 +84,7 @@ export function PlayerList({
                   </svg>
                 )}
               </div>
-              <div
-                className={`flex items-center grow gap-2 px-4 py-2 ${player.isBot ? "cursor-pointer" : ""}`}
-              >
+              <div className="flex items-center grow gap-2 px-4 py-2">
                 {/* Name + badges */}
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <span
@@ -110,9 +111,13 @@ export function PlayerList({
                       bot
                     </span>
                   )}
+                  {/* Personality info tooltip — shown to non-host for bots */}
+                  {player.isBot && !isHost && personality && (
+                    <PersonalityTooltip personality={personality} />
+                  )}
                 </div>
 
-                {/* Score + remove button on the right */}
+                {/* Score + action buttons on the right */}
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {scores && (
                     <span className="text-game-gold font-semibold">
@@ -143,17 +148,41 @@ export function PlayerList({
                       </svg>
                     </button>
                   )}
+                  {!player.isBot && canKick && onKickPlayer && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onKickPlayer(player.id);
+                      }}
+                      aria-label="Kick player"
+                      className="text-game-muted hover:text-red-400 transition-colors"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
             </li>
 
-            {/* Expanded personality section */}
-            {player.isBot && isExpanded && (
+            {/* Expanded personality section — host only */}
+            {player.isBot && isHost && isExpanded && (
               <div className="px-4 pb-3 border-t border-game-border">
                 <p className="text-xs text-game-muted uppercase tracking-widest mt-2 mb-1">
                   Personality
                 </p>
-                {isHost && onUpdateBotPersonality ? (
+                {onUpdateBotPersonality ? (
                   <input
                     type="text"
                     value={personality}
@@ -182,5 +211,25 @@ export function PlayerList({
         );
       })}
     </ul>
+  );
+}
+
+function PersonalityTooltip({ personality }: { personality: string }) {
+  return (
+    <span className="relative group inline-flex items-center">
+      <svg
+        className="w-3.5 h-3.5 text-game-muted cursor-default"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-4m0-4h.01" />
+      </svg>
+      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 bg-game-surface border border-game-border text-game-text text-xs rounded-lg px-3 py-2 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+        {personality}
+      </span>
+    </span>
   );
 }

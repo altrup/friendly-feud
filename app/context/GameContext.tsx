@@ -86,6 +86,7 @@ interface GameContextValue {
   addBot: () => void;
   removeBot: (botId: string) => void;
   updateBotPersonality: (botId: string, personality: string) => void;
+  kickPlayer: (playerId: string) => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -197,6 +198,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    // ── kicked: host removed this player from the room ──
+    socket.on("kicked", () => {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("feud_session");
+      }
+      setState(initialState);
+      navigate("/");
+    });
+
     // ── session_expired: grace period elapsed, session no longer valid ──
     socket.on("session_expired", () => {
       if (typeof window !== "undefined") {
@@ -281,6 +291,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     return () => {
       socket.off("connect");
+      socket.off("kicked");
       socket.off("session_created");
       socket.off("session_restored");
       socket.off("session_expired");
@@ -375,6 +386,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [socket]
   );
 
+  const kickPlayer = useCallback(
+    (playerId: string) => {
+      socket.emit("kick_player", { playerId });
+    },
+    [socket]
+  );
+
   return (
     <GameContext.Provider
       value={{
@@ -391,6 +409,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         addBot,
         removeBot,
         updateBotPersonality,
+        kickPlayer,
       }}
     >
       {children}

@@ -8,9 +8,10 @@ interface Props {
   roundScoreDeltas?: Record<string, number> | null;
   /** All guesses from the round, used to show what each player guessed */
   roundGuesses?: { guesserId: string; guess: string; matched: boolean }[] | null;
+  onKickPlayer?: (playerId: string) => void;
 }
 
-export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas, roundGuesses }: Props) {
+export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas, roundGuesses, onKickPlayer }: Props) {
   // Sort by score descending, alphabetical tiebreaker
   const sorted = [...players].sort((a, b) => {
     const scoreDiff = (scores[b.id] ?? 0) - (scores[a.id] ?? 0);
@@ -35,6 +36,7 @@ export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas,
         {sorted.map((player, i) => {
           const delta = roundScoreDeltas?.[player.id];
           const guesses = guessesByPlayer.get(player.id) ?? [];
+          const canKick = onKickPlayer && player.id !== currentPlayerId;
           return (
             <li
               key={player.id}
@@ -53,6 +55,24 @@ export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas,
                 >
                   {player.name}
                 </span>
+                {/* Personality tooltip for bots */}
+                {player.isBot && player.botPersonality && (
+                  <span className="relative group inline-flex items-center shrink-0">
+                    <svg
+                      className="w-3.5 h-3.5 text-game-muted cursor-default"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-4m0-4h.01" />
+                    </svg>
+                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 bg-game-surface border border-game-border text-game-text text-xs rounded-lg px-3 py-2 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                      {player.botPersonality}
+                    </span>
+                  </span>
+                )}
                 {/* Guesses made this round */}
                 {guesses.length > 0 && (
                   <div className="flex flex-wrap gap-1 min-w-0">
@@ -78,6 +98,23 @@ export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas,
                 <span className="text-game-gold font-bold text-sm">
                   {scores[player.id] ?? 0}
                 </span>
+                {canKick && (
+                  <button
+                    onClick={() => onKickPlayer(player.id)}
+                    aria-label="Kick player"
+                    className="text-game-muted hover:text-red-400 transition-colors ml-1"
+                  >
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </li>
           );

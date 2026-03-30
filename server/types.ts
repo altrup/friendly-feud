@@ -81,6 +81,7 @@ export interface ServerToClientEvents {
   round_end: (data: RoundEndPayload) => void;
   game_end: (data: GameEndPayload) => void;
   error: (data: ErrorPayload) => void;
+  kicked: () => void;
   session_created: (data: { sessionId: string }) => void;
   session_restored: (state: ClientGameState) => void;
   session_expired: () => void;
@@ -100,4 +101,5 @@ export interface ClientToServerEvents {
   add_bot: () => void;
   remove_bot: (data: { botId: string }) => void;
   update_bot_personality: (data: { botId: string; personality: string }) => void;
+  kick_player: (data: { playerId: string }) => void;
 }
