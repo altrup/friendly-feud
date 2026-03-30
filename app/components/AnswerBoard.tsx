@@ -67,7 +67,7 @@ export function AnswerBoard({
             </div>
             <div
               className={`mt-1 text-lg font-bold ${
-                isRevealed ? "text-game-text" : "text-game-muted tracking-widest"
+                isRevealed ? "text-game-text" : "text-game-muted"
               }`}
             >
               {isRevealed ? (answer ?? "✓") : "???"}
