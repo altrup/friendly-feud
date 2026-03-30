@@ -106,14 +106,14 @@ export function PlayerList({
                       host
                     </span>
                   )}
+                  {/* Personality info tooltip — shown to non-host for bots, before bot label */}
+                  {player.isBot && !isHost && personality && (
+                    <PersonalityTooltip personality={personality} />
+                  )}
                   {player.isBot && (
                     <span className="text-xs bg-game-surface border border-game-border text-game-muted px-2 py-0.5 rounded-full">
                       bot
                     </span>
-                  )}
-                  {/* Personality info tooltip — shown to non-host for bots */}
-                  {player.isBot && !isHost && personality && (
-                    <PersonalityTooltip personality={personality} />
                   )}
                 </div>
 
