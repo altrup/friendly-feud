@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # Set to "true" to enable AI-powered answer matching
+      USE_AI_MATCHING: ${USE_AI_MATCHING:-false}
