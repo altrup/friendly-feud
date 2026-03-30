@@ -15,7 +15,7 @@ type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 
 export function registerSocketHandlers(
   io: TypedServer,
-  gameManager: GameManager
+  gameManager: GameManager,
 ): void {
   io.on("connection", (socket: TypedSocket) => {
     // ─── create_lobby ──────────────────────────────────────────────────────────
@@ -134,20 +134,16 @@ export function registerSocketHandlers(
         scoreDeltas: Object.fromEntries(result.scoreDeltas),
       });
 
-      // After a miss, advance to the next guesser
-      if (!result.matched) {
+      if (room.allAnswersMatched()) {
+        // All answers revealed — round is over
+        endRound(io, room);
+      } else {
         const outcome = room.advanceGuesser();
         if (outcome === "round_end" || room.allAnswersMatched()) {
           endRound(io, room);
         } else {
           io.to(room.code).emit("phase_change", room.toClientState());
         }
-      } else if (room.allAnswersMatched()) {
-        // All answers revealed — round is over
-        endRound(io, room);
-      } else {
-        // Correct guess: guesser keeps their turn; broadcast updated state
-        io.to(room.code).emit("phase_change", room.toClientState());
       }
     });
 
