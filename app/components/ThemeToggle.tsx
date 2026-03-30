@@ -66,9 +66,9 @@ export function ThemeToggle() {
       aria-label={
         state.theme === "light" ? "Switch to dark mode" : "Switch to light mode"
       }
-      className="fixed top-4 right-4 z-50 bg-game-surface border border-game-border text-game-muted hover:text-game-text rounded-full w-9 h-9 flex items-center justify-center transition-colors"
+      className="fixed bottom-4 right-4 z-50 bg-game-surface border border-game-border text-game-muted hover:text-game-text rounded-full w-9 h-9 flex items-center justify-center transition-colors"
     >
-      {state.theme === "light" ? "☀️" : "🌙"}
+      {state.theme === "light" ? "🌙" : "☀️"}
     </button>
   );
 }

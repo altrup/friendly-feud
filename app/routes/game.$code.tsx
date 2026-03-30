@@ -45,7 +45,7 @@ export default function GameRoute() {
       {/* Score sidebar — rendered first in DOM so it appears above main content on mobile.
           On lg screens, order-2 pushes it to the right side. */}
       {showSidebar && (
-        <aside className="lg:w-64 lg:order-2 p-6 pt-6 lg:pt-16">
+        <aside className="lg:w-64 lg:order-2 p-6 pt-6">
           <ScoreBoard
             players={state.players}
             scores={state.scores}
