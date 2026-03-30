@@ -83,7 +83,7 @@ interface GameContextValue {
   nextRound: () => void;
   passTurn: () => void;
   clearError: () => void;
-  addBot: (name: string, personality: string) => void;
+  addBot: () => void;
   removeBot: (botId: string) => void;
   updateBotPersonality: (botId: string, personality: string) => void;
 }
@@ -357,12 +357,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
-  const addBot = useCallback(
-    (name: string, personality: string) => {
-      socket.emit("add_bot", { name, personality });
-    },
-    [socket]
-  );
+  const addBot = useCallback(() => {
+    socket.emit("add_bot");
+  }, [socket]);
 
   const removeBot = useCallback(
     (botId: string) => {

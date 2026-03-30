@@ -2,6 +2,10 @@
 // Called once from server/app.ts with the Socket.io server and GameManager instances.
 
 import { randomUUID } from "crypto";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const DEFAULT_BOTS: { name: string; personality: string }[] = require("./data/defaultBots.json");
 import type { Server, Socket } from "socket.io";
 import type {
   ClientToServerEvents,
@@ -233,9 +237,11 @@ export function registerSocketHandlers(
     });
 
     // ─── add_bot ──────────────────────────────────────────────────────────────
-    socket.on("add_bot", ({ name, personality }) => {
+    socket.on("add_bot", () => {
       const room = gameManager.getRoomBySocketId(socket.id);
       if (!room || room.hostId !== socket.id || room.phase !== "waiting") return;
+      // Cycle through defaults based on how many bots already exist
+      const { name, personality } = DEFAULT_BOTS[room.botIds.size % DEFAULT_BOTS.length];
       const botId = `bot-${randomUUID()}`;
       room.addBot(botId, name, personality);
       io.to(room.code).emit("lobby_update", room.toClientState());

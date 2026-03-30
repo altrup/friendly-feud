@@ -97,7 +97,7 @@ export interface ClientToServerEvents {
   submit_guess: (data: { guess: string; targetPlayerId?: string }) => void;
   next_round: () => void;
   pass_turn: () => void;
-  add_bot: (data: { name: string; personality: string }) => void;
+  add_bot: () => void;
   remove_bot: (data: { botId: string }) => void;
   update_bot_personality: (data: { botId: string; personality: string }) => void;
 }

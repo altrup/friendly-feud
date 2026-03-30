@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useGame } from "../context/GameContext.js";
 import { PlayerList } from "../components/PlayerList.js";
-import DEFAULT_BOTS from "../data/defaultBots.json";
 
 export function meta() {
   return [{ title: "Friendly Feud | Lobby" }];
@@ -122,12 +121,7 @@ export default function LobbyRoute() {
         {/* Add bot button — host only, lobby only */}
         {isHost && (
           <button
-            onClick={() => {
-              const bots = DEFAULT_BOTS;
-              const botCount = state.players.filter((p) => p.isBot).length;
-              const { name, personality } = bots[botCount % bots.length];
-              addBot(name, personality);
-            }}
+            onClick={() => addBot()}
             className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-dashed border-game-border text-game-muted hover:border-game-accent hover:text-game-text text-sm transition-colors"
           >
             <span className="text-lg leading-none">+</span>
