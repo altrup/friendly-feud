@@ -236,7 +236,7 @@ export class GameRoom {
     excludedIds.add(guesserId);
 
     // Returns all socket IDs whose answer matches the guess (guesser already excluded)
-    const matchedIds = await matchGuessAsync(guess, this.answers, excludedIds);
+    const matchedIds = await matchGuessAsync(this.currentQuestion?.prompt ?? "", guess, this.answers, excludedIds);
 
     if (matchedIds.length === 0) {
       this.guessHistory.push({ guesserId, guess, matched: false, matchedPlayerId: null });

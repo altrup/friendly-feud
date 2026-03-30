@@ -58,7 +58,7 @@ export function matchGuess(
  * Only called when USE_AI_MATCHING=true is set in the environment.
  * Falls back to basicMatch if the API call fails.
  */
-async function aiMatch(guess: string, answer: string): Promise<boolean> {
+async function aiMatch(question: string, guess: string, answer: string): Promise<boolean> {
   try {
     // Dynamic import so the Anthropic SDK is only loaded when needed
     // @ts-ignore — optional dependency, only required when USE_AI_MATCHING=true
@@ -71,10 +71,11 @@ async function aiMatch(guess: string, answer: string): Promise<boolean> {
       messages: [
         {
           role: "user",
-          content: `Are these semantically equivalent for Family Feud? Ignore typos, different grammatical forms (e.g., "gaming" vs "play games"), and allow broad synonyms or categories (e.g., "mobile device" vs "phone"). Answer only "yes" or "no".\nAnswer 1: "${answer}"\nAnswer 2: "${guess}"`,
+          content: `Are these semantically equivalent for Family Feud? Ignore typos, different grammatical forms (e.g., "gaming" vs "play games"), and allow broad synonyms or categories (e.g., "mobile device" vs "phone"). Answer only "yes" or "no".\nQuestion: "${question}"\nAnswer 1: "${answer}"\nAnswer 2: "${guess}"`,
         },
       ],
     });
+    console.log("HEY", `Are these semantically equivalent for Family Feud? Ignore typos, different grammatical forms (e.g., "gaming" vs "play games"), and allow broad synonyms or categories (e.g., "mobile device" vs "phone"). Answer only "yes" or "no".\nQuestion: "${question}"\nAnswer 1: "${answer}"\nAnswer 2: "${guess}"`);
 
     const text =
       response.content[0].type === "text"
@@ -95,6 +96,7 @@ async function aiMatch(guess: string, answer: string): Promise<boolean> {
  * Returns all matched socket IDs (empty array if none match).
  */
 export async function matchGuessAsync(
+  question: string,
   guess: string,
   answers: Map<string, string>,
   excludedIds: Set<string>
@@ -106,7 +108,7 @@ export async function matchGuessAsync(
     if (excludedIds.has(socketId)) continue;
 
     const isMatch = useAI
-      ? await aiMatch(guess, answer)
+      ? await aiMatch(question, guess, answer)
       : basicMatch(guess, answer);
 
     if (isMatch) matched.push(socketId);
