@@ -71,7 +71,7 @@ async function aiMatch(guess: string, answer: string): Promise<boolean> {
       messages: [
         {
           role: "user",
-          content: `Are these two answers semantically equivalent for a Family Feud-style game? Answer only "yes" or "no".\nAnswer 1: "${answer}"\nAnswer 2: "${guess}"`,
+          content: `Are these two answers semantically equivalent for a Family Feud-style game? Typos or misspellings should be ignored if the intent is clear. Answer only "yes" or "no".\nAnswer 1: "${answer}"\nAnswer 2: "${guess}"`,
         },
       ],
     });
@@ -81,7 +81,8 @@ async function aiMatch(guess: string, answer: string): Promise<boolean> {
         ? response.content[0].text.toLowerCase().trim()
         : "";
     return text.startsWith("yes");
-  } catch {
+  } catch (e) {
+    console.log(e);
     // If AI is unavailable, fall back to basic matching
     return basicMatch(guess, answer);
   }
