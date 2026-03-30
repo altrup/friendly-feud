@@ -23,7 +23,7 @@ export function PhaseRoundEnd() {
       {/* Revealed answers with who guessed each one */}
       <AnswerBoard
         players={state.players}
-        matchedPlayerIds={state.players.map((p) => p.id)}
+        matchedPlayerIds={state.matchedPlayerIds}
         revealedAnswers={state.roundAnswers}
         guessHistory={state.roundGuesses}
       />

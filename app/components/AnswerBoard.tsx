@@ -33,8 +33,8 @@ export function AnswerBoard({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {players.map((player) => {
-        const isRevealed =
-          matchedPlayerIds.includes(player.id) || !!revealedAnswers;
+        const wasGuessed = matchedPlayerIds.includes(player.id);
+        const isRevealed = wasGuessed || !!revealedAnswers;
         const answer = revealedAnswers
           ? revealedAnswers[player.id]
           : isRevealed
@@ -50,9 +50,11 @@ export function AnswerBoard({
           <div
             key={player.id}
             className={`relative rounded-xl border px-4 py-3 transition-all duration-300 ${
-              isRevealed
+              wasGuessed
                 ? "bg-game-card border-game-success/50"
-                : "bg-game-surface border-game-border"
+                : isRevealed
+                  ? "bg-game-card border-game-border"
+                  : "bg-game-surface border-game-border"
             }`}
           >
             <div className="flex items-center justify-between">
