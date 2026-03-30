@@ -1,0 +1,269 @@
+// Socket.io event handlers — all game events are registered here.
+// Called once from server/app.ts with the Socket.io server and GameManager instances.
+
+import type { Server, Socket } from "socket.io";
+import type {
+  ClientToServerEvents,
+  GameEndPayload,
+  ServerToClientEvents,
+} from "./types.js";
+import type { GameManager } from "./GameManager.js";
+import type { GameRoom } from "./GameRoom.js";
+
+type TypedServer = Server<ClientToServerEvents, ServerToClientEvents>;
+type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
+
+export function registerSocketHandlers(
+  io: TypedServer,
+  gameManager: GameManager
+): void {
+  io.on("connection", (socket: TypedSocket) => {
+    // ─── create_lobby ──────────────────────────────────────────────────────────
+    socket.on("create_lobby", ({ playerName }) => {
+      if (!playerName?.trim()) {
+        socket.emit("error", { message: "Player name is required." });
+        return;
+      }
+
+      const room = gameManager.createRoom(socket.id, playerName.trim());
+      socket.join(room.code);
+      socket.emit("lobby_update", room.toClientState());
+    });
+
+    // ─── join_lobby ────────────────────────────────────────────────────────────
+    socket.on("join_lobby", ({ code, playerName }) => {
+      if (!playerName?.trim() || !code?.trim()) {
+        socket.emit("error", { message: "Name and room code are required." });
+        return;
+      }
+
+      const room = gameManager.getRoom(code.trim().toUpperCase());
+      if (!room) {
+        socket.emit("error", { message: "Room not found." });
+        return;
+      }
+      if (!room.canJoin()) {
+        socket.emit("error", {
+          message:
+            room.phase !== "waiting"
+              ? "Game already in progress."
+              : "Room is full.",
+        });
+        return;
+      }
+
+      room.addPlayer(socket.id, playerName.trim());
+      socket.join(room.code);
+      // Broadcast updated player list to everyone in the room
+      io.to(room.code).emit("lobby_update", room.toClientState());
+    });
+
+    // ─── start_game ────────────────────────────────────────────────────────────
+    socket.on("start_game", () => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room) return;
+      if (room.hostId !== socket.id) {
+        socket.emit("error", { message: "Only the host can start the game." });
+        return;
+      }
+      if (room.players.size < 2) {
+        socket.emit("error", { message: "Need at least 2 players to start." });
+        return;
+      }
+      if (room.phase !== "waiting") {
+        socket.emit("error", { message: "Game already started." });
+        return;
+      }
+
+      const question = gameManager.getRandomQuestion(room.usedQuestionIds);
+      room.startAnsweringPhase(question);
+
+      // Start a 60-second timer; auto-advance to guessing if time runs out
+      room.setAnswerTimer(() => {
+        if (room.phase === "answering") {
+          startGuessingPhase(io, room);
+        }
+      });
+
+      io.to(room.code).emit("phase_change", room.toClientState());
+    });
+
+    // ─── submit_answer ─────────────────────────────────────────────────────────
+    socket.on("submit_answer", ({ answer }) => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room || room.phase !== "answering") return;
+      if (!answer?.trim()) {
+        socket.emit("error", { message: "Answer cannot be empty." });
+        return;
+      }
+      // Prevent re-submission
+      if (room.answers.has(socket.id)) return;
+
+      const allAnswered = room.submitAnswer(socket.id, answer);
+
+      if (allAnswered) {
+        startGuessingPhase(io, room);
+      } else {
+        // Broadcast updated answeredPlayerIds so everyone sees who has answered
+        io.to(room.code).emit("phase_change", room.toClientState());
+      }
+    });
+
+    // ─── submit_guess ──────────────────────────────────────────────────────────
+    socket.on("submit_guess", async ({ guess }) => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room || room.phase !== "guessing") return;
+      if (room.getCurrentGuesser() !== socket.id) {
+        socket.emit("error", { message: "It is not your turn to guess." });
+        return;
+      }
+      if (!guess?.trim()) {
+        socket.emit("error", { message: "Guess cannot be empty." });
+        return;
+      }
+
+      const result = await room.processGuess(socket.id, guess.trim());
+
+      // Emit guess result to all players
+      io.to(room.code).emit("guess_result", {
+        guesserId: socket.id,
+        guess: guess.trim(),
+        matched: result.matched,
+        matchedPlayerId: result.matchedPlayerId,
+        matchedAnswer: result.matchedAnswer,
+        scoreDeltas: Object.fromEntries(result.scoreDeltas),
+      });
+
+      // After a miss, advance to the next guesser
+      if (!result.matched) {
+        const outcome = room.advanceGuesser();
+        if (outcome === "round_end" || room.allAnswersMatched()) {
+          endRound(io, room);
+        } else {
+          io.to(room.code).emit("phase_change", room.toClientState());
+        }
+      } else if (room.allAnswersMatched()) {
+        // All answers revealed — round is over
+        endRound(io, room);
+      } else {
+        // Correct guess: guesser keeps their turn; broadcast updated state
+        io.to(room.code).emit("phase_change", room.toClientState());
+      }
+    });
+
+    // ─── pass_turn ─────────────────────────────────────────────────────────────
+    socket.on("pass_turn", () => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room || room.phase !== "guessing") return;
+      if (room.getCurrentGuesser() !== socket.id) return;
+
+      const outcome = room.advanceGuesser();
+      if (outcome === "round_end" || room.allAnswersMatched()) {
+        endRound(io, room);
+      } else {
+        io.to(room.code).emit("phase_change", room.toClientState());
+      }
+    });
+
+    // ─── next_round ────────────────────────────────────────────────────────────
+    socket.on("next_round", () => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room || room.hostId !== socket.id) return;
+      if (room.phase !== "round_end") return;
+
+      const outcome = room.advanceRound();
+      if (outcome === "game_end") {
+        emitGameEnd(io, room);
+      } else {
+        const question = gameManager.getRandomQuestion(room.usedQuestionIds);
+        room.startAnsweringPhase(question);
+
+        room.setAnswerTimer(() => {
+          if (room.phase === "answering") {
+            startGuessingPhase(io, room);
+          }
+        });
+
+        io.to(room.code).emit("phase_change", room.toClientState());
+      }
+    });
+
+    // ─── disconnect ────────────────────────────────────────────────────────────
+    socket.on("disconnect", () => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room) return;
+
+      room.removePlayer(socket.id);
+
+      if (room.players.size === 0) {
+        // Empty room — clean it up
+        gameManager.deleteRoom(room.code);
+        return;
+      }
+
+      // If the host disconnected, promote the next player
+      if (room.hostId === socket.id) {
+        const newHostId = room.playerOrder[0];
+        room.hostId = newHostId;
+        const newHost = room.players.get(newHostId);
+        if (newHost) {
+          room.players.set(newHostId, { ...newHost, isHost: true });
+        }
+      }
+
+      // If mid-guessing and the current guesser left, advance the turn
+      if (room.phase === "guessing") {
+        // Clamp index in case it's out of bounds
+        if (room.currentGuesserIndex >= room.playerOrder.length) {
+          room.currentGuesserIndex = 0;
+        }
+        if (room.allAnswersMatched()) {
+          endRound(io, room);
+          return;
+        }
+      }
+
+      io.to(room.code).emit("lobby_update", room.toClientState());
+    });
+  });
+}
+
+// ─── Shared helpers ──────────────────────────────────────────────────────────
+
+function startGuessingPhase(io: TypedServer, room: GameRoom): void {
+  room.startGuessingPhase();
+  io.to(room.code).emit("phase_change", room.toClientState());
+}
+
+function endRound(io: TypedServer, room: GameRoom): void {
+  room.phase = "round_end";
+  io.to(room.code).emit("round_end", {
+    state: room.toClientState(),
+    revealedAnswers: room.getRevealedAnswers(),
+  });
+}
+
+function emitGameEnd(io: TypedServer, room: GameRoom): void {
+  const scores = Object.fromEntries(room.scores);
+  const players = Array.from(room.players.values());
+
+  // Find the winner (highest score; ties go to earlier join order)
+  let winner = players[0];
+  for (const player of players) {
+    const score = room.scores.get(player.id) ?? 0;
+    const winnerScore = room.scores.get(winner.id) ?? 0;
+    if (score > winnerScore) winner = player;
+  }
+
+  const payload: GameEndPayload = {
+    scores,
+    winner: {
+      id: winner.id,
+      name: winner.name,
+      score: room.scores.get(winner.id) ?? 0,
+    },
+    players,
+  };
+
+  io.to(room.code).emit("game_end", payload);
+}

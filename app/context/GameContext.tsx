@@ -1,0 +1,264 @@
+// GameContext provides all real-time game state to the component tree.
+// It subscribes to Socket.io events and exposes typed action dispatchers.
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useNavigate } from "react-router";
+import { useSocket } from "../hooks/useSocket.js";
+import type {
+  ClientGameState,
+  GameEndPayload,
+  GamePhase,
+  GuessResultPayload,
+  Player,
+  Question,
+} from "../../server/types.js";
+
+// ─── State shape ─────────────────────────────────────────────────────────────
+
+interface GameState {
+  roomCode: string | null;
+  mySocketId: string | null;
+  myName: string | null;
+  phase: GamePhase;
+  players: Player[];
+  scores: Record<string, number>;
+  currentQuestion: Question | null;
+  currentGuesserSocketId: string | null;
+  answeredPlayerIds: string[];
+  matchedPlayerIds: string[];
+  lastGuessResult: GuessResultPayload | null;
+  /** Revealed at round_end: socketId → answer text */
+  roundAnswers: Record<string, string> | null;
+  roundNumber: number;
+  hostId: string | null;
+  gameEnd: GameEndPayload | null;
+  error: string | null;
+}
+
+const initialState: GameState = {
+  roomCode: null,
+  mySocketId: null,
+  myName: null,
+  phase: "waiting",
+  players: [],
+  scores: {},
+  currentQuestion: null,
+  currentGuesserSocketId: null,
+  answeredPlayerIds: [],
+  matchedPlayerIds: [],
+  lastGuessResult: null,
+  roundAnswers: null,
+  roundNumber: 0,
+  hostId: null,
+  gameEnd: null,
+  error: null,
+};
+
+// ─── Context value ────────────────────────────────────────────────────────────
+
+interface GameContextValue {
+  state: GameState;
+  createLobby: (playerName: string) => void;
+  joinLobby: (code: string, playerName: string) => void;
+  startGame: () => void;
+  submitAnswer: (answer: string) => void;
+  submitGuess: (guess: string) => void;
+  nextRound: () => void;
+  passTurn: () => void;
+  clearError: () => void;
+}
+
+const GameContext = createContext<GameContextValue | null>(null);
+
+// ─── Provider ────────────────────────────────────────────────────────────────
+
+export function GameProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<GameState>(initialState);
+  const navigate = useNavigate();
+  const socket = useSocket();
+
+  // Track the room code and name in refs so event handlers always see the latest value
+  const roomCodeRef = useRef<string | null>(null);
+  const myNameRef = useRef<string | null>(null);
+
+  // Helper to apply a ClientGameState update
+  const applyRoomState = useCallback((roomState: ClientGameState) => {
+    setState((prev) => ({
+      ...prev,
+      roomCode: roomState.code,
+      phase: roomState.phase,
+      players: roomState.players,
+      scores: roomState.scores,
+      currentQuestion: roomState.currentQuestion,
+      currentGuesserSocketId: roomState.currentGuesserSocketId,
+      answeredPlayerIds: roomState.answeredPlayerIds,
+      matchedPlayerIds: roomState.matchedPlayerIds,
+      hostId: roomState.hostId,
+      currentRound: roomState.currentRound,
+      roundNumber: roomState.currentRound,
+      // Clear previous round data on new phase
+      roundAnswers: null,
+      lastGuessResult: null,
+      error: null,
+    }));
+    roomCodeRef.current = roomState.code;
+  }, []);
+
+  useEffect(() => {
+    // Store socket ID once connected
+    socket.on("connect", () => {
+      setState((prev) => ({ ...prev, mySocketId: socket.id ?? null }));
+    });
+
+    // ── lobby_update: received when player list changes ──
+    socket.on("lobby_update", (roomState) => {
+      applyRoomState(roomState);
+      // Navigate to lobby if we just joined/created
+      if (roomCodeRef.current) {
+        navigate(`/lobby/${roomState.code}`);
+      }
+    });
+
+    // ── phase_change: game state machine advanced ──
+    socket.on("phase_change", (roomState) => {
+      applyRoomState(roomState);
+      if (roomState.phase !== "waiting") {
+        navigate(`/game/${roomState.code}`);
+      }
+    });
+
+    // ── guess_result: outcome of a guess attempt ──
+    socket.on("guess_result", (data) => {
+      setState((prev) => ({
+        ...prev,
+        lastGuessResult: data,
+        // Merge in updated matchedPlayerIds from the guess
+        matchedPlayerIds: data.matched && data.matchedPlayerId
+          ? [...prev.matchedPlayerIds, data.matchedPlayerId]
+          : prev.matchedPlayerIds,
+      }));
+    });
+
+    // ── round_end: all answers revealed ──
+    socket.on("round_end", ({ state: roomState, revealedAnswers }) => {
+      applyRoomState(roomState);
+      setState((prev) => ({
+        ...prev,
+        phase: "round_end",
+        roundAnswers: revealedAnswers,
+        scores: roomState.scores,
+      }));
+    });
+
+    // ── game_end: final results ──
+    socket.on("game_end", (data) => {
+      setState((prev) => ({
+        ...prev,
+        phase: "game_end",
+        scores: data.scores,
+        gameEnd: data,
+      }));
+    });
+
+    // ── error: server sent an error message ──
+    socket.on("error", ({ message }) => {
+      setState((prev) => ({ ...prev, error: message }));
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("lobby_update");
+      socket.off("phase_change");
+      socket.off("guess_result");
+      socket.off("round_end");
+      socket.off("game_end");
+      socket.off("error");
+    };
+  }, [socket, navigate, applyRoomState]);
+
+  // ─── Actions ─────────────────────────────────────────────────────────────────
+
+  const createLobby = useCallback(
+    (playerName: string) => {
+      myNameRef.current = playerName;
+      setState((prev) => ({ ...prev, myName: playerName, error: null }));
+      if (!socket.connected) socket.connect();
+      socket.emit("create_lobby", { playerName });
+    },
+    [socket]
+  );
+
+  const joinLobby = useCallback(
+    (code: string, playerName: string) => {
+      myNameRef.current = playerName;
+      setState((prev) => ({ ...prev, myName: playerName, error: null }));
+      if (!socket.connected) socket.connect();
+      socket.emit("join_lobby", { code, playerName });
+    },
+    [socket]
+  );
+
+  const startGame = useCallback(() => {
+    socket.emit("start_game");
+  }, [socket]);
+
+  const submitAnswer = useCallback(
+    (answer: string) => {
+      socket.emit("submit_answer", { answer });
+    },
+    [socket]
+  );
+
+  const submitGuess = useCallback(
+    (guess: string) => {
+      socket.emit("submit_guess", { guess });
+    },
+    [socket]
+  );
+
+  const nextRound = useCallback(() => {
+    socket.emit("next_round");
+  }, [socket]);
+
+  const passTurn = useCallback(() => {
+    socket.emit("pass_turn");
+  }, [socket]);
+
+  const clearError = useCallback(() => {
+    setState((prev) => ({ ...prev, error: null }));
+  }, []);
+
+  return (
+    <GameContext.Provider
+      value={{
+        state,
+        createLobby,
+        joinLobby,
+        startGame,
+        submitAnswer,
+        submitGuess,
+        nextRound,
+        passTurn,
+        clearError,
+      }}
+    >
+      {children}
+    </GameContext.Provider>
+  );
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+export function useGame(): GameContextValue {
+  const ctx = useContext(GameContext);
+  if (!ctx) throw new Error("useGame must be used inside <GameProvider>");
+  return ctx;
+}

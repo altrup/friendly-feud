@@ -1,0 +1,22 @@
+[
+  { "id": "q1", "prompt": "Name something you do before bed.", "category": "Daily Life" },
+  { "id": "q2", "prompt": "Name a topping you'd put on a pizza.", "category": "Food" },
+  { "id": "q3", "prompt": "Name something you always forget to pack when traveling.", "category": "Travel" },
+  { "id": "q4", "prompt": "Name a reason someone might be late to work.", "category": "Work" },
+  { "id": "q5", "prompt": "Name something you'd find in a refrigerator.", "category": "Food" },
+  { "id": "q6", "prompt": "Name something people do when they're bored.", "category": "Daily Life" },
+  { "id": "q7", "prompt": "Name a sport you can play in the backyard.", "category": "Sports" },
+  { "id": "q8", "prompt": "Name something you'd bring to a picnic.", "category": "Food" },
+  { "id": "q9", "prompt": "Name a reason someone might call in sick.", "category": "Work" },
+  { "id": "q10", "prompt": "Name something you do on a rainy day.", "category": "Daily Life" },
+  { "id": "q11", "prompt": "Name a famous landmark you'd want to visit.", "category": "Travel" },
+  { "id": "q12", "prompt": "Name something you find in a bathroom.", "category": "Daily Life" },
+  { "id": "q13", "prompt": "Name a type of movie people watch on date night.", "category": "Entertainment" },
+  { "id": "q14", "prompt": "Name something kids beg their parents for.", "category": "Family" },
+  { "id": "q15", "prompt": "Name an animal you might see at a zoo.", "category": "Animals" },
+  { "id": "q16", "prompt": "Name a hobby people take up in retirement.", "category": "Daily Life" },
+  { "id": "q17", "prompt": "Name something people post on social media.", "category": "Technology" },
+  { "id": "q18", "prompt": "Name a word you'd use to describe a bad movie.", "category": "Entertainment" },
+  { "id": "q19", "prompt": "Name something you do at a birthday party.", "category": "Celebrations" },
+  { "id": "q20", "prompt": "Name something that gets lost easily.", "category": "Daily Life" }
+]

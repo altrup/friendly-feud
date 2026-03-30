@@ -1,0 +1,231 @@
+// GameRoom encapsulates all mutable state for a single game session.
+// All phase transitions and game logic go through this class; socket.ts calls
+// methods here and emits events based on the returned values.
+
+import type { ClientGameState, GamePhase, Player, Question } from "./types.js";
+import { matchGuessAsync } from "./matching.js";
+import { computeScoreDeltas, findMatchedIds } from "./scoring.js";
+
+export interface GuessResult {
+  matched: boolean;
+  matchedPlayerId: string | null;
+  matchedAnswer: string | null;
+  /** All socket IDs whose answer was matched (≥1 for shared answers) */
+  matchedIds: string[];
+  scoreDeltas: Map<string, number>;
+}
+
+export class GameRoom {
+  readonly code: string;
+  hostId: string;
+  phase: GamePhase = "waiting";
+
+  /** Ordered list of socket IDs (join order preserved for guesser rotation) */
+  playerOrder: string[] = [];
+  players: Map<string, Player> = new Map();
+
+  currentRound: number = 0;
+  currentQuestion: Question | null = null;
+
+  /** socketId → submitted answer (hidden from clients during answering phase) */
+  answers: Map<string, string> = new Map();
+
+  /** Index into playerOrder for whose turn it is during guessing */
+  currentGuesserIndex: number = 0;
+
+  /** Socket IDs of players whose answers have already been matched */
+  matchedPlayerIds: Set<string> = new Set();
+
+  scores: Map<string, number> = new Map();
+
+  /** Questions used in this game session (to avoid repeats) */
+  usedQuestionIds: Set<string> = new Set();
+
+  /** Server-side timer for the answering phase timeout */
+  private answerTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(code: string, hostSocketId: string, hostName: string) {
+    this.code = code;
+    this.hostId = hostSocketId;
+    this.addPlayer(hostSocketId, hostName, true);
+  }
+
+  // ─── Player management ──────────────────────────────────────────────────────
+
+  addPlayer(socketId: string, name: string, isHost = false): void {
+    this.players.set(socketId, { id: socketId, name, isHost });
+    this.playerOrder.push(socketId);
+    this.scores.set(socketId, 0);
+  }
+
+  removePlayer(socketId: string): void {
+    this.players.delete(socketId);
+    this.playerOrder = this.playerOrder.filter((id) => id !== socketId);
+    this.answers.delete(socketId);
+    // Keep score entry — score history is still meaningful
+  }
+
+  /** Returns true if the room can accept new players. */
+  canJoin(): boolean {
+    return this.phase === "waiting" && this.players.size < 10;
+  }
+
+  // ─── Phase transitions ──────────────────────────────────────────────────────
+
+  /** Transition to the answering phase with the given question. */
+  startAnsweringPhase(question: Question): void {
+    this.currentQuestion = question;
+    this.usedQuestionIds.add(question.id);
+    this.phase = "answering";
+    this.answers.clear();
+    this.matchedPlayerIds.clear();
+    this.currentGuesserIndex = 0;
+    this.currentRound++;
+  }
+
+  /**
+   * Record a player's answer.
+   * Returns true if ALL active players have now answered (caller should start guessing phase).
+   */
+  submitAnswer(socketId: string, answer: string): boolean {
+    if (this.phase !== "answering") return false;
+    this.answers.set(socketId, answer.trim());
+    return this.answers.size >= this.playerOrder.length;
+  }
+
+  /** Set the 60-second timeout for the answering phase. Stored so it can be cancelled early. */
+  setAnswerTimer(callback: () => void): void {
+    this.clearAnswerTimer();
+    this.answerTimer = setTimeout(callback, 60_000);
+  }
+
+  clearAnswerTimer(): void {
+    if (this.answerTimer !== null) {
+      clearTimeout(this.answerTimer);
+      this.answerTimer = null;
+    }
+  }
+
+  /** Transition to the guessing phase. */
+  startGuessingPhase(): void {
+    this.clearAnswerTimer();
+    this.phase = "guessing";
+    this.currentGuesserIndex = 0;
+  }
+
+  // ─── Guessing ───────────────────────────────────────────────────────────────
+
+  /** Returns the socket ID of the player whose turn it is. */
+  getCurrentGuesser(): string {
+    return this.playerOrder[this.currentGuesserIndex];
+  }
+
+  /**
+   * Process a guess from the current guesser.
+   * Handles matching, scoring, and marking answers as revealed.
+   */
+  async processGuess(guesserId: string, guess: string): Promise<GuessResult> {
+    const matchedSocketId = await matchGuessAsync(
+      guess,
+      this.answers,
+      this.matchedPlayerIds
+    );
+
+    if (!matchedSocketId) {
+      return {
+        matched: false,
+        matchedPlayerId: null,
+        matchedAnswer: null,
+        matchedIds: [],
+        scoreDeltas: new Map(),
+      };
+    }
+
+    // Find all players who gave the same answer (shared answer handling)
+    const matchedAnswer = this.answers.get(matchedSocketId)!;
+    const matchedIds = findMatchedIds(
+      this.answers,
+      matchedAnswer.trim().toLowerCase()
+    );
+
+    // Mark all matched players so their answers can't be guessed again
+    for (const id of matchedIds) {
+      this.matchedPlayerIds.add(id);
+    }
+
+    // Compute and apply score deltas
+    const scoreDeltas = computeScoreDeltas(guesserId, matchedIds);
+    for (const [id, delta] of scoreDeltas) {
+      this.scores.set(id, (this.scores.get(id) ?? 0) + delta);
+    }
+
+    return {
+      matched: true,
+      matchedPlayerId: matchedSocketId,
+      matchedAnswer: matchedAnswer,
+      matchedIds,
+      scoreDeltas,
+    };
+  }
+
+  /**
+   * Advance the guesser to the next player.
+   * Returns 'round_end' if all players have had their turn, 'continue' otherwise.
+   */
+  advanceGuesser(): "continue" | "round_end" {
+    this.currentGuesserIndex++;
+    if (this.currentGuesserIndex >= this.playerOrder.length) {
+      return "round_end";
+    }
+    return "continue";
+  }
+
+  /** Check whether all answers have been successfully matched. */
+  allAnswersMatched(): boolean {
+    return this.matchedPlayerIds.size >= this.playerOrder.length;
+  }
+
+  // ─── Round / game advancement ────────────────────────────────────────────────
+
+  /**
+   * Called by the host to advance after a round ends.
+   * Returns 'game_end' after 3 rounds, 'next_round' otherwise.
+   */
+  advanceRound(): "next_round" | "game_end" {
+    if (this.currentRound >= 3) {
+      this.phase = "game_end";
+      return "game_end";
+    }
+    this.phase = "answering"; // will be properly set by startAnsweringPhase
+    return "next_round";
+  }
+
+  // ─── Serialization ──────────────────────────────────────────────────────────
+
+  /**
+   * Returns a plain object safe to JSON.stringify and emit to clients.
+   * During the answering phase, actual answers are NOT included.
+   */
+  toClientState(): ClientGameState {
+    return {
+      code: this.code,
+      phase: this.phase,
+      hostId: this.hostId,
+      players: Array.from(this.players.values()),
+      scores: Object.fromEntries(this.scores),
+      currentRound: this.currentRound,
+      currentQuestion: this.currentQuestion,
+      currentGuesserSocketId:
+        this.phase === "guessing"
+          ? (this.playerOrder[this.currentGuesserIndex] ?? null)
+          : null,
+      answeredPlayerIds: Array.from(this.answers.keys()),
+      matchedPlayerIds: Array.from(this.matchedPlayerIds),
+    };
+  }
+
+  /** Returns the full answers map — only emitted at round_end. */
+  getRevealedAnswers(): Record<string, string> {
+    return Object.fromEntries(this.answers);
+  }
+}
