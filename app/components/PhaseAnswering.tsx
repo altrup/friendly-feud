@@ -31,30 +31,47 @@ export function PhaseAnswering() {
   const rh = Math.max(0, cardSize.height - strokeWidth);
   const perimeter = rw > 0 && rh > 0 ? 2 * (rw + rh) + rx * (2 * Math.PI - 8) : 0;
 
-  // When the deadline or perimeter becomes known, snap to the current drain position
-  // then kick off a single CSS transition to the fully-drained state.
+  // When the deadline or perimeter becomes known (or the tab regains visibility),
+  // snap to the wall-clock-correct drain position then kick off a CSS transition
+  // to the fully-drained state. Re-syncing on visibilitychange prevents the
+  // animation from drifting when the browser throttles background tabs.
   useEffect(() => {
     if (!state.answerDeadline || perimeter === 0) return;
 
-    const remaining = Math.max(0, (state.answerDeadline - Date.now()) / 1000);
-    const startOffset = perimeter * (1 - remaining / 60);
+    let raf1: number, raf2: number;
 
-    // Snap to current position with no transition
-    setTransitionDuration(0);
-    setDashOffset(startOffset);
+    function syncAnimation() {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
 
-    // Two rAFs: first lets React commit the snap, second starts the transition
-    let raf2: number;
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        setTransitionDuration(remaining);
-        setDashOffset(perimeter);
+      const remaining = Math.max(0, (state.answerDeadline! - Date.now()) / 1000);
+      const startOffset = perimeter * (1 - remaining / 60);
+
+      // Snap to current position with no transition
+      setTransitionDuration(0);
+      setDashOffset(startOffset);
+
+      // Two rAFs: first lets React commit the snap, second starts the transition
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => {
+          setTransitionDuration(remaining);
+          setDashOffset(perimeter);
+        });
       });
-    });
+    }
+
+    syncAnimation();
+
+    function handleVisibilityChange() {
+      if (!document.hidden) syncAnimation();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [state.answerDeadline, perimeter]);
 
