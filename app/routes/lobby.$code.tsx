@@ -196,7 +196,12 @@ export default function LobbyRoute() {
             </div>
 
             <button
-              onClick={() => { setIsStarting(true); startGame(selectedQuestionSet, selectedQuestionSet === "custom" ? customTheme : undefined); }}
+              onClick={() => {
+                setIsStarting(true);
+                startGame(selectedQuestionSet, selectedQuestionSet === "custom" ? customTheme : undefined);
+                // Re-enable after 10s in case the server never responds
+                setTimeout(() => setIsStarting(false), 10_000);
+              }}
               disabled={!canStart || (selectedQuestionSet === "custom" && !customTheme.trim()) || isStarting}
               className="bg-game-accent hover:bg-game-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl px-10 py-4 text-xl transition-colors"
             >

@@ -3,6 +3,7 @@
 
 export type GamePhase =
   | "waiting"
+  | "starting"
   | "answering"
   | "guessing"
   | "round_end"

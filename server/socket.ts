@@ -99,6 +99,8 @@ export function registerSocketHandlers(
 
       room.questionSet = questionSet ?? "all";
       room.customTheme = customTheme?.trim() || null;
+      // Advance phase immediately so concurrent start_game events are rejected
+      room.phase = "starting";
 
       let question: Question;
       if (room.questionSet === "custom" && room.customTheme) {
