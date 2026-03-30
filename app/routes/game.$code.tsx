@@ -42,20 +42,20 @@ export default function GameRoute() {
 
   return (
     <main className="min-h-screen bg-game-bg flex flex-col lg:flex-row">
-      {/* Main game area */}
-      <div className="flex-1 p-6 flex flex-col justify-center max-w-2xl mx-auto w-full">
-        {/* Leave button */}
-        {state.phase !== "game_end" && (
-          <div className="mb-4">
-            <button
-              onClick={leaveGame}
-              className="text-game-muted text-sm underline hover:text-game-text transition-colors"
-            >
-              Leave game
-            </button>
-          </div>
-        )}
+      {/* Score sidebar — rendered first in DOM so it appears above main content on mobile.
+          On lg screens, order-2 pushes it to the right side. */}
+      {showSidebar && (
+        <aside className="lg:w-64 lg:order-2 p-6 pt-6 lg:pt-16">
+          <ScoreBoard
+            players={state.players}
+            scores={state.scores}
+            currentPlayerId={state.mySocketId}
+          />
+        </aside>
+      )}
 
+      {/* Main game area */}
+      <div className="flex-1 lg:order-1 p-6 flex flex-col justify-center max-w-2xl mx-auto w-full">
         {/* Error banner */}
         {state.error && (
           <div className="mb-4 bg-game-accent/20 border border-game-accent text-game-text px-4 py-3 rounded-lg text-sm">
@@ -76,15 +76,14 @@ export default function GameRoute() {
         )}
       </div>
 
-      {/* Score sidebar — hidden on game_end since PhaseGameEnd has its own scoreboard */}
-      {showSidebar && (
-        <aside className="lg:w-64 p-6 lg:pt-16">
-          <ScoreBoard
-            players={state.players}
-            scores={state.scores}
-            currentPlayerId={state.mySocketId}
-          />
-        </aside>
+      {/* Leave button — fixed bottom-left, hidden on game_end */}
+      {state.phase !== "game_end" && (
+        <button
+          onClick={leaveGame}
+          className="fixed bottom-4 left-4 text-game-muted text-sm underline hover:text-game-text transition-colors"
+        >
+          Leave game
+        </button>
       )}
     </main>
   );

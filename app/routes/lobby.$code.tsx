@@ -67,14 +67,6 @@ export default function LobbyRoute() {
         />
       </div>
 
-      {/* Leave button */}
-      <button
-        onClick={leaveGame}
-        className="text-game-muted text-sm underline hover:text-game-text transition-colors"
-      >
-        Leave game
-      </button>
-
       {/* Start button */}
       <div className="text-center">
         {isHost ? (
@@ -98,6 +90,13 @@ export default function LobbyRoute() {
           </p>
         )}
       </div>
+      {/* Leave button — fixed bottom-left */}
+      <button
+        onClick={leaveGame}
+        className="fixed bottom-4 left-4 text-game-muted text-sm underline hover:text-game-text transition-colors"
+      >
+        Leave game
+      </button>
     </main>
   );
 }
