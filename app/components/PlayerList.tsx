@@ -35,7 +35,7 @@ export function PlayerList({ players, currentPlayerId, scores }: Props) {
             )}
           </div>
           {scores && (
-            <span className="text-game-gold font-mono font-semibold">
+            <span className="text-game-gold font-semibold">
               {scores[player.id] ?? 0}
             </span>
           )}

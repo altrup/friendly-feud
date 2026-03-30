@@ -39,7 +39,7 @@ export function ScoreBoard({ players, scores, currentPlayerId }: Props) {
                 {player.name}
               </span>
             </div>
-            <span className="text-game-gold font-mono font-bold text-sm">
+            <span className="text-game-gold font-bold text-sm">
               {scores[player.id] ?? 0}
             </span>
           </li>

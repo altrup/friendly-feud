@@ -94,7 +94,7 @@ export default function Home() {
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
             maxLength={4}
-            className="bg-game-card border border-game-border rounded-lg px-4 py-2 text-game-text placeholder-game-muted focus:outline-none focus:border-game-accent font-mono tracking-widest"
+            className="bg-game-card border border-game-border rounded-lg px-4 py-2 text-game-text placeholder-game-muted focus:outline-none focus:border-game-accent tracking-widest placeholder:tracking-normal"
           />
           <button
             type="submit"
