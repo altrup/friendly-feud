@@ -67,7 +67,6 @@ export function PlayerList({
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                     strokeWidth={2.5}
-                    onClick={() => toggleBot(player.id)}
                   >
                     <path
                       strokeLinecap="round"
