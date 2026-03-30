@@ -30,6 +30,12 @@ export class GameRoom {
   /** socketId → submitted answer (hidden from clients during answering phase) */
   answers: Map<string, string> = new Map();
 
+  /** All guesses made during the guessing phase, in order */
+  guessHistory: { guesserId: string; guess: string; matched: boolean; matchedPlayerId: string | null }[] = [];
+
+  /** Accumulated score deltas for the current round */
+  roundScoreDeltas: Map<string, number> = new Map();
+
   /** Index into playerOrder for whose turn it is during guessing */
   currentGuesserIndex: number = 0;
 
@@ -165,6 +171,8 @@ export class GameRoom {
     this.usedQuestionIds.add(question.id);
     this.phase = "answering";
     this.answers.clear();
+    this.guessHistory = [];
+    this.roundScoreDeltas.clear();
     this.matchedPlayerIds.clear();
     this.currentGuesserIndex = 0;
     this.currentRound++;
@@ -225,6 +233,7 @@ export class GameRoom {
     );
 
     if (!matchedSocketId) {
+      this.guessHistory.push({ guesserId, guess, matched: false, matchedPlayerId: null });
       return {
         matched: false,
         matchedPlayerId: null,
@@ -250,8 +259,10 @@ export class GameRoom {
     const scoreDeltas = computeScoreDeltas(guesserId, matchedIds);
     for (const [id, delta] of scoreDeltas) {
       this.scores.set(id, (this.scores.get(id) ?? 0) + delta);
+      this.roundScoreDeltas.set(id, (this.roundScoreDeltas.get(id) ?? 0) + delta);
     }
 
+    this.guessHistory.push({ guesserId, guess, matched: true, matchedPlayerId: matchedSocketId });
     return {
       matched: true,
       matchedPlayerId: matchedSocketId,
@@ -321,5 +332,15 @@ export class GameRoom {
   /** Returns the full answers map — only emitted at round_end. */
   getRevealedAnswers(): Record<string, string> {
     return Object.fromEntries(this.answers);
+  }
+
+  /** Returns all guesses made during the round — only emitted at round_end. */
+  getGuessHistory(): { guesserId: string; guess: string; matched: boolean; matchedPlayerId: string | null }[] {
+    return [...this.guessHistory];
+  }
+
+  /** Returns score deltas accumulated during the round — only emitted at round_end. */
+  getRoundScoreDeltas(): Record<string, number> {
+    return Object.fromEntries(this.roundScoreDeltas);
   }
 }

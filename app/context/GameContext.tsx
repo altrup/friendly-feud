@@ -37,6 +37,10 @@ interface GameState {
   lastGuessResult: GuessResultPayload | null;
   /** Revealed at round_end: socketId → answer text */
   roundAnswers: Record<string, string> | null;
+  /** Revealed at round_end: all guesses made during the round */
+  roundGuesses: { guesserId: string; guess: string; matched: boolean; matchedPlayerId: string | null }[] | null;
+  /** Revealed at round_end: score change per player for this round */
+  roundScoreDeltas: Record<string, number> | null;
   roundNumber: number;
   hostId: string | null;
   gameEnd: GameEndPayload | null;
@@ -57,6 +61,8 @@ const initialState: GameState = {
   matchedPlayerIds: [],
   lastGuessResult: null,
   roundAnswers: null,
+  roundGuesses: null,
+  roundScoreDeltas: null,
   roundNumber: 0,
   hostId: null,
   gameEnd: null,
@@ -110,6 +116,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       roundNumber: roomState.currentRound,
       // Clear previous round data on new phase
       roundAnswers: null,
+      roundGuesses: null,
+      roundScoreDeltas: null,
       lastGuessResult: null,
       error: null,
     }));
@@ -238,12 +246,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
 
     // ── round_end: all answers revealed ──
-    socket.on("round_end", ({ state: roomState, revealedAnswers }) => {
+    socket.on("round_end", ({ state: roomState, revealedAnswers, guessHistory, roundScoreDeltas }) => {
       applyRoomState(roomState);
       setState((prev) => ({
         ...prev,
         phase: "round_end",
         roundAnswers: revealedAnswers,
+        roundGuesses: guessHistory,
+        roundScoreDeltas,
         scores: roomState.scores,
       }));
     });

@@ -53,6 +53,8 @@ export interface GuessResultPayload {
 export interface RoundEndPayload {
   state: ClientGameState;
   revealedAnswers: Record<string, string>; // socketId → answer text
+  guessHistory: { guesserId: string; guess: string; matched: boolean; matchedPlayerId: string | null }[];
+  roundScoreDeltas: Record<string, number>;
 }
 
 export interface GameEndPayload {

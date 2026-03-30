@@ -247,6 +247,8 @@ function endRound(io: TypedServer, room: GameRoom): void {
   io.to(room.code).emit("round_end", {
     state: room.toClientState(),
     revealedAnswers: room.getRevealedAnswers(),
+    guessHistory: room.getGuessHistory(),
+    roundScoreDeltas: room.getRoundScoreDeltas(),
   });
 }
 

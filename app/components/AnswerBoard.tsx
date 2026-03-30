@@ -9,6 +9,8 @@ interface Props {
   revealedAnswers?: Record<string, string> | null;
   /** scoreDeltas from the last guess result, used to briefly highlight new reveals */
   lastScoreDeltas?: Record<string, number>;
+  /** guessHistory from round_end, used to show who guessed each answer */
+  guessHistory?: { guesserId: string; guess: string; matched: boolean; matchedPlayerId: string | null }[] | null;
 }
 
 export function AnswerBoard({
@@ -16,7 +18,18 @@ export function AnswerBoard({
   matchedPlayerIds,
   revealedAnswers,
   lastScoreDeltas,
+  guessHistory,
 }: Props) {
+  // Build a map from answerer's socket ID to the guesser who matched it
+  const guesserForAnswer = new Map<string, string>();
+  if (guessHistory) {
+    for (const entry of guessHistory) {
+      if (entry.matched && entry.matchedPlayerId) {
+        guesserForAnswer.set(entry.matchedPlayerId, entry.guesserId);
+      }
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {players.map((player) => {
@@ -28,6 +41,10 @@ export function AnswerBoard({
             ? "✓"
             : null;
         const delta = lastScoreDeltas?.[player.id];
+        const guesserId = guesserForAnswer.get(player.id);
+        const guesserName = guesserId
+          ? players.find((p) => p.id === guesserId)?.name
+          : null;
 
         return (
           <div
@@ -52,10 +69,14 @@ export function AnswerBoard({
                 isRevealed ? "text-game-text" : "text-game-muted tracking-widest"
               }`}
             >
-              {isRevealed
-                ? (answer ?? "✓")
-                : "???"}
+              {isRevealed ? (answer ?? "✓") : "???"}
             </div>
+            {/* Show who guessed this answer at round end */}
+            {guesserName && (
+              <div className="mt-1 text-xs text-game-success">
+                guessed by {guesserName}
+              </div>
+            )}
           </div>
         );
       })}

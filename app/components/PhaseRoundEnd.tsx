@@ -20,18 +20,21 @@ export function PhaseRoundEnd() {
         )}
       </div>
 
-      {/* Revealed answers */}
+      {/* Revealed answers with who guessed each one */}
       <AnswerBoard
         players={state.players}
         matchedPlayerIds={state.players.map((p) => p.id)}
         revealedAnswers={state.roundAnswers}
+        guessHistory={state.roundGuesses}
       />
 
-      {/* Scores */}
+      {/* Scores with each player's guesses and round delta */}
       <ScoreBoard
         players={state.players}
         scores={state.scores}
         currentPlayerId={state.mySocketId}
+        roundScoreDeltas={state.roundScoreDeltas}
+        roundGuesses={state.roundGuesses}
       />
 
       {/* Advance button */}
