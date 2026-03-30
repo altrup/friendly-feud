@@ -17,6 +17,7 @@ export default function LobbyRoute() {
   useEffect(() => setMounted(true), []);
 
   const [categories, setCategories] = useState<string[]>([]);
+  const [isStarting, setIsStarting] = useState(false);
   const [selectedQuestionSet, setSelectedQuestionSet] = useState("all");
   const [customTheme, setCustomTheme] = useState("");
   const customThemePlaceholder = "Enter a custom theme…";
@@ -195,11 +196,11 @@ export default function LobbyRoute() {
             </div>
 
             <button
-              onClick={() => startGame(selectedQuestionSet, selectedQuestionSet === "custom" ? customTheme : undefined)}
-              disabled={!canStart || (selectedQuestionSet === "custom" && !customTheme.trim())}
+              onClick={() => { setIsStarting(true); startGame(selectedQuestionSet, selectedQuestionSet === "custom" ? customTheme : undefined); }}
+              disabled={!canStart || (selectedQuestionSet === "custom" && !customTheme.trim()) || isStarting}
               className="bg-game-accent hover:bg-game-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl px-10 py-4 text-xl transition-colors"
             >
-              Start Game
+              {isStarting ? "Starting…" : "Start Game"}
             </button>
             {!canStart && (
               <p className="text-game-muted text-sm">
