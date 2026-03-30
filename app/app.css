@@ -23,3 +23,7 @@ body {
   @apply bg-game-bg text-game-text;
   color-scheme: dark;
 }
+
+button {
+  cursor: pointer;
+}
