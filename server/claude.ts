@@ -66,29 +66,47 @@ export async function generateBotAnswer(
 }
 
 /**
- * Ask Claude whether a guess semantically matches an answer for the given question.
- * Returns null on failure so the caller can fall back to basic string matching.
+ * Ask Claude whether a guess semantically matches any of the given answers for the question.
+ * Checks all answers in a single API call instead of one call per answer.
+ * Returns an array of booleans (one per answer), or null on failure so the caller can fall back.
  */
-export async function checkGuessMatch(
+export async function checkGuessMatchBatch(
   question: string,
   guess: string,
-  answer: string,
-): Promise<boolean | null> {
+  answers: string[],
+): Promise<boolean[] | null> {
+  if (answers.length === 0) return [];
+
+  const pairs = answers
+    .map((a, i) => `${i + 1}. "${a}"`)
+    .join("\n");
+
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 10,
+    max_tokens: answers.length * 8,
     messages: [
       {
         role: "user",
         content:
-          `Are these semantically equivalent for Family Feud? Ignore typos, different grammatical forms (e.g., "gaming" vs "play games"), and allow broad synonyms or categories (e.g., "mobile device" vs "phone"). Answer only "yes" or "no".\nQuestion: "${question}"\nAnswer 1: "${answer}"\nAnswer 2: "${guess}"`,
+          `You are judging a Family Feud game. For each candidate answer below, decide if it is semantically equivalent to the player's guess. ` +
+          `Ignore typos, different grammatical forms (e.g. "gaming" vs "play games"), and allow broad synonyms or categories (e.g. "mobile device" vs "phone").\n\n` +
+          `Question: "${question}"\nPlayer's guess: "${guess}"\n\nCandidate answers:\n${pairs}\n\n` +
+          `Reply with exactly one line per candidate in the format "1: yes" or "1: no", nothing else.`,
       },
     ],
   });
 
   const text =
-    response.content[0].type === "text"
-      ? response.content[0].text.toLowerCase().trim()
-      : "";
-  return text.startsWith("yes");
+    response.content[0].type === "text" ? response.content[0].text.trim() : "";
+
+  // Parse "1: yes\n2: no\n..." into a boolean array
+  const results: boolean[] = new Array(answers.length).fill(false);
+  for (const line of text.split("\n")) {
+    const m = line.match(/^(\d+):\s*(yes|no)/i);
+    if (m) {
+      const idx = parseInt(m[1], 10) - 1;
+      if (idx >= 0 && idx < answers.length) results[idx] = m[2].toLowerCase() === "yes";
+    }
+  }
+  return results;
 }

@@ -2,7 +2,7 @@
 // Basic: case-insensitive, whitespace-trimmed string equality.
 // AI path: calls Claude API for semantic similarity (opt-in via USE_AI_MATCHING=true in .env).
 
-import { checkGuessMatch } from "./claude.js";
+import { checkGuessMatchBatch } from "./claude.js";
 
 /** Normalize a string for comparison: trim and lowercase. */
 export function normalize(str: string): string {
@@ -56,24 +56,8 @@ export function matchGuess(
 // ─── Optional AI matching ──────────────────────────────────────────────────────
 
 /**
- * AI-powered semantic matching using the Claude API.
- * Only called when USE_AI_MATCHING=true is set in the environment.
- * Falls back to basicMatch if the API call fails.
- */
-async function aiMatch(question: string, guess: string, answer: string): Promise<boolean> {
-  try {
-    const result = await checkGuessMatch(question, guess, answer);
-    if (result !== null) return result;
-  } catch (e) {
-    console.log(e);
-  }
-  // If AI is unavailable, fall back to basic matching
-  return basicMatch(guess, answer);
-}
-
-/**
  * Matches a guess against a map of candidate answers using the configured strategy.
- * In AI mode, checks each candidate individually (slower but more forgiving).
+ * In AI mode, checks all candidates in a single API call.
  *
  * Returns all matched socket IDs (empty array if none match).
  */
@@ -84,16 +68,37 @@ export async function matchGuessAsync(
   excludedIds: Set<string>
 ): Promise<string[]> {
   const useAI = process.env.USE_AI_MATCHING === "true";
-  const matched: string[] = [];
 
+  // Collect candidates (socketId + answer) that haven't been matched yet
+  const candidates: { socketId: string; answer: string }[] = [];
   for (const [socketId, answer] of answers) {
-    if (excludedIds.has(socketId)) continue;
-
-    const isMatch = useAI
-      ? await aiMatch(question, guess, answer)
-      : basicMatch(guess, answer);
-
-    if (isMatch) matched.push(socketId);
+    if (!excludedIds.has(socketId)) candidates.push({ socketId, answer });
   }
-  return matched;
+
+  if (!useAI) {
+    return candidates
+      .filter(({ answer }) => basicMatch(guess, answer))
+      .map(({ socketId }) => socketId);
+  }
+
+  // Single API call for all candidates
+  try {
+    const results = await checkGuessMatchBatch(
+      question,
+      guess,
+      candidates.map((c) => c.answer),
+    );
+    if (results !== null) {
+      return candidates
+        .filter((_, i) => results[i])
+        .map(({ socketId }) => socketId);
+    }
+  } catch (e) {
+    console.log(e);
+  }
+
+  // Fall back to basic matching if AI call fails
+  return candidates
+    .filter(({ answer }) => basicMatch(guess, answer))
+    .map(({ socketId }) => socketId);
 }
