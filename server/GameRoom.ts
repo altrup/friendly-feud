@@ -44,6 +44,13 @@ export class GameRoom {
   /** Server-side timer for the answering phase timeout */
   private answerTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /** sessionId → socketId (for reconnection) */
+  sessionToSocket: Map<string, string> = new Map();
+  /** socketId → sessionId (for disconnect lookup) */
+  socketToSession: Map<string, string> = new Map();
+  /** Grace period timers: sessionId → timer (30s before player is removed on disconnect) */
+  private disconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+
   constructor(code: string, hostSocketId: string, hostName: string) {
     this.code = code;
     this.hostId = hostSocketId;
@@ -62,7 +69,85 @@ export class GameRoom {
     this.players.delete(socketId);
     this.playerOrder = this.playerOrder.filter((id) => id !== socketId);
     this.answers.delete(socketId);
+    const sessionId = this.socketToSession.get(socketId);
+    if (sessionId) {
+      this.sessionToSocket.delete(sessionId);
+      this.socketToSession.delete(socketId);
+    }
     // Keep score entry — score history is still meaningful
+  }
+
+  /** Register a session token for a connected player. */
+  registerSession(sessionId: string, socketId: string): void {
+    this.sessionToSocket.set(sessionId, socketId);
+    this.socketToSession.set(socketId, sessionId);
+  }
+
+  /**
+   * Remap all game state references from the old socket ID to the new one
+   * when a player reconnects with an existing session.
+   * Returns the old socket ID, or null if the session wasn't found.
+   */
+  updateSessionSocket(sessionId: string, newSocketId: string): string | null {
+    const oldSocketId = this.sessionToSocket.get(sessionId);
+    if (!oldSocketId) return null;
+
+    this.socketToSession.delete(oldSocketId);
+    this.sessionToSocket.set(sessionId, newSocketId);
+    this.socketToSession.set(newSocketId, sessionId);
+
+    const player = this.players.get(oldSocketId);
+    if (player) {
+      this.players.delete(oldSocketId);
+      this.players.set(newSocketId, { ...player, id: newSocketId });
+    }
+
+    this.playerOrder = this.playerOrder.map((id) =>
+      id === oldSocketId ? newSocketId : id
+    );
+
+    const score = this.scores.get(oldSocketId) ?? 0;
+    this.scores.delete(oldSocketId);
+    this.scores.set(newSocketId, score);
+
+    const answer = this.answers.get(oldSocketId);
+    if (answer !== undefined) {
+      this.answers.delete(oldSocketId);
+      this.answers.set(newSocketId, answer);
+    }
+
+    if (this.matchedPlayerIds.has(oldSocketId)) {
+      this.matchedPlayerIds.delete(oldSocketId);
+      this.matchedPlayerIds.add(newSocketId);
+    }
+
+    if (this.hostId === oldSocketId) this.hostId = newSocketId;
+
+    return oldSocketId;
+  }
+
+  startDisconnectTimer(sessionId: string, onExpire: () => void): void {
+    this.cancelDisconnectTimer(sessionId);
+    const timer = setTimeout(() => {
+      this.disconnectTimers.delete(sessionId);
+      onExpire();
+    }, 30_000);
+    this.disconnectTimers.set(sessionId, timer);
+  }
+
+  cancelDisconnectTimer(sessionId: string): void {
+    const timer = this.disconnectTimers.get(sessionId);
+    if (timer) {
+      clearTimeout(timer);
+      this.disconnectTimers.delete(sessionId);
+    }
+  }
+
+  clearAllDisconnectTimers(): void {
+    for (const timer of this.disconnectTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.disconnectTimers.clear();
   }
 
   /** Returns true if the room can accept new players. */

@@ -112,15 +112,101 @@ export function GameProvider({ children }: { children: ReactNode }) {
     roomCodeRef.current = roomState.code;
   }, []);
 
+  // ── Attempt session recovery on mount ───────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = sessionStorage.getItem("feud_session");
+    if (!saved) return;
+
+    let session: { sessionId: string; roomCode: string; playerName: string };
+    try {
+      session = JSON.parse(saved);
+    } catch {
+      sessionStorage.removeItem("feud_session");
+      return;
+    }
+    if (!session?.sessionId || !session?.roomCode) {
+      sessionStorage.removeItem("feud_session");
+      return;
+    }
+
+    myNameRef.current = session.playerName;
+    setState((prev) => ({ ...prev, myName: session.playerName }));
+
+    const doRejoin = () => {
+      socket.emit("rejoin_session", {
+        sessionId: session.sessionId,
+        roomCode: session.roomCode,
+      });
+    };
+
+    if (socket.connected) {
+      doRejoin();
+    } else {
+      socket.once("connect", doRejoin);
+      socket.connect();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally run once on mount only
+
   useEffect(() => {
     // Store socket ID once connected
     socket.on("connect", () => {
       setState((prev) => ({ ...prev, mySocketId: socket.id ?? null }));
     });
 
+    // ── session_created: save session token to sessionStorage ──
+    // roomCode isn't known yet (lobby_update hasn't arrived), so we store a
+    // partial entry; lobby_update will fill in the roomCode below.
+    socket.on("session_created", ({ sessionId }) => {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(
+          "feud_session",
+          JSON.stringify({
+            sessionId,
+            roomCode: null,
+            playerName: myNameRef.current,
+          })
+        );
+      }
+    });
+
+    // ── session_restored: reconnected to an existing game session ──
+    socket.on("session_restored", (roomState) => {
+      applyRoomState(roomState);
+      setState((prev) => ({ ...prev, mySocketId: socket.id ?? null }));
+      if (roomState.phase === "waiting") {
+        navigate(`/lobby/${roomState.code}`);
+      } else {
+        navigate(`/game/${roomState.code}`);
+      }
+    });
+
+    // ── session_expired: grace period elapsed, session no longer valid ──
+    socket.on("session_expired", () => {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("feud_session");
+      }
+    });
+
     // ── lobby_update: received when player list changes ──
     socket.on("lobby_update", (roomState) => {
       applyRoomState(roomState);
+      // Patch roomCode into the session entry now that we know it
+      if (typeof window !== "undefined") {
+        const saved = sessionStorage.getItem("feud_session");
+        if (saved) {
+          try {
+            const entry = JSON.parse(saved);
+            if (!entry.roomCode) {
+              sessionStorage.setItem(
+                "feud_session",
+                JSON.stringify({ ...entry, roomCode: roomState.code })
+              );
+            }
+          } catch { /* ignore */ }
+        }
+      }
       // Navigate to lobby if we just joined/created
       if (roomCodeRef.current) {
         navigate(`/lobby/${roomState.code}`);
@@ -160,6 +246,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     // ── game_end: final results ──
     socket.on("game_end", (data) => {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("feud_session");
+      }
       setState((prev) => ({
         ...prev,
         phase: "game_end",
@@ -175,6 +264,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     return () => {
       socket.off("connect");
+      socket.off("session_created");
+      socket.off("session_restored");
+      socket.off("session_expired");
       socket.off("lobby_update");
       socket.off("phase_change");
       socket.off("guess_result");

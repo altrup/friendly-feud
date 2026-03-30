@@ -1,6 +1,7 @@
 // Socket.io event handlers — all game events are registered here.
 // Called once from server/app.ts with the Socket.io server and GameManager instances.
 
+import { randomUUID } from "crypto";
 import type { Server, Socket } from "socket.io";
 import type {
   ClientToServerEvents,
@@ -27,6 +28,9 @@ export function registerSocketHandlers(
 
       const room = gameManager.createRoom(socket.id, playerName.trim());
       socket.join(room.code);
+      const sessionId = randomUUID();
+      room.registerSession(sessionId, socket.id);
+      socket.emit("session_created", { sessionId });
       socket.emit("lobby_update", room.toClientState());
     });
 
@@ -54,8 +58,25 @@ export function registerSocketHandlers(
 
       room.addPlayer(socket.id, playerName.trim());
       socket.join(room.code);
+      const sessionId = randomUUID();
+      room.registerSession(sessionId, socket.id);
+      socket.emit("session_created", { sessionId });
       // Broadcast updated player list to everyone in the room
       io.to(room.code).emit("lobby_update", room.toClientState());
+    });
+
+    // ─── rejoin_session ────────────────────────────────────────────────────────
+    socket.on("rejoin_session", ({ sessionId, roomCode }) => {
+      const room = gameManager.getRoom(roomCode);
+      if (!room || !room.sessionToSocket.has(sessionId)) {
+        socket.emit("session_expired");
+        return;
+      }
+
+      room.cancelDisconnectTimer(sessionId);
+      room.updateSessionSocket(sessionId, socket.id);
+      socket.join(room.code);
+      socket.emit("session_restored", room.toClientState());
     });
 
     // ─── start_game ────────────────────────────────────────────────────────────
@@ -189,37 +210,15 @@ export function registerSocketHandlers(
       const room = gameManager.getRoomBySocketId(socket.id);
       if (!room) return;
 
-      room.removePlayer(socket.id);
-
-      if (room.players.size === 0) {
-        // Empty room — clean it up
-        gameManager.deleteRoom(room.code);
-        return;
+      const sessionId = room.socketToSession.get(socket.id);
+      if (sessionId) {
+        // Give the player 30s to reconnect before removing them
+        room.startDisconnectTimer(sessionId, () => {
+          handlePlayerLeave(io, room, socket.id, gameManager);
+        });
+      } else {
+        handlePlayerLeave(io, room, socket.id, gameManager);
       }
-
-      // If the host disconnected, promote the next player
-      if (room.hostId === socket.id) {
-        const newHostId = room.playerOrder[0];
-        room.hostId = newHostId;
-        const newHost = room.players.get(newHostId);
-        if (newHost) {
-          room.players.set(newHostId, { ...newHost, isHost: true });
-        }
-      }
-
-      // If mid-guessing and the current guesser left, advance the turn
-      if (room.phase === "guessing") {
-        // Clamp index in case it's out of bounds
-        if (room.currentGuesserIndex >= room.playerOrder.length) {
-          room.currentGuesserIndex = 0;
-        }
-        if (room.allAnswersMatched()) {
-          endRound(io, room);
-          return;
-        }
-      }
-
-      io.to(room.code).emit("lobby_update", room.toClientState());
     });
   });
 }
@@ -262,4 +261,41 @@ function emitGameEnd(io: TypedServer, room: GameRoom): void {
   };
 
   io.to(room.code).emit("game_end", payload);
+}
+
+function handlePlayerLeave(
+  io: TypedServer,
+  room: GameRoom,
+  socketId: string,
+  gameManager: GameManager
+): void {
+  room.removePlayer(socketId);
+
+  if (room.players.size === 0) {
+    gameManager.deleteRoom(room.code);
+    return;
+  }
+
+  // If the host left, promote the next player
+  if (room.hostId === socketId) {
+    const newHostId = room.playerOrder[0];
+    room.hostId = newHostId;
+    const newHost = room.players.get(newHostId);
+    if (newHost) {
+      room.players.set(newHostId, { ...newHost, isHost: true });
+    }
+  }
+
+  // If mid-guessing and the current guesser left, clamp the index
+  if (room.phase === "guessing") {
+    if (room.currentGuesserIndex >= room.playerOrder.length) {
+      room.currentGuesserIndex = 0;
+    }
+    if (room.allAnswersMatched()) {
+      endRound(io, room);
+      return;
+    }
+  }
+
+  io.to(room.code).emit("lobby_update", room.toClientState());
 }

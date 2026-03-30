@@ -44,6 +44,7 @@ export class GameManager {
     const room = this.rooms.get(code);
     if (room) {
       room.clearAnswerTimer();
+      room.clearAllDisconnectTimers();
       this.rooms.delete(code);
     }
   }
