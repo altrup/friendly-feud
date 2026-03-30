@@ -10,6 +10,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { GameProvider } from "./context/GameContext.js";
+import { ThemeToggle } from "./components/ThemeToggle.js";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -24,16 +25,26 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+// Runs synchronously before CSS is applied to prevent flash of wrong theme.
+// If a manual override is stored, apply it; otherwise leave data-theme unset
+// so the CSS prefers-color-scheme media query handles it automatically.
+const themeScript = `(function(){try{var t=localStorage.getItem('feud-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`;
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: server renders no data-theme attr; the inline
+    // script sets it on the client before hydration, causing a benign mismatch
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Must be first — sets data-theme before stylesheets are parsed */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
       </head>
       <body>
+        <ThemeToggle />
         {children}
         <ScrollRestoration />
         <Scripts />

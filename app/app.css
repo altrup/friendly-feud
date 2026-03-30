@@ -18,9 +18,44 @@
   --color-game-border: #2a3a5e;
 }
 
+/* Light mode — activated by OS preference (unless user manually chose dark)
+   or by explicit data-theme="light" on <html> */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --color-game-bg: #e8eaf6;
+    --color-game-surface: #dde1f0;
+    --color-game-card: #c5cde8;
+    --color-game-card-hover: #aab5de;
+    --color-game-accent: #e94560;
+    --color-game-accent-hover: #c73652;
+    --color-game-gold: #b8860b;
+    --color-game-success: #2e7d32;
+    --color-game-text: #1a1a2e;
+    --color-game-muted: #4a4a6a;
+    --color-game-border: #b0bbd4;
+    color-scheme: light;
+  }
+}
+
+:root[data-theme="light"] {
+  --color-game-bg: #e8eaf6;
+  --color-game-surface: #dde1f0;
+  --color-game-card: #c5cde8;
+  --color-game-card-hover: #aab5de;
+  --color-game-accent: #e94560;
+  --color-game-accent-hover: #c73652;
+  --color-game-gold: #b8860b;
+  --color-game-success: #2e7d32;
+  --color-game-text: #1a1a2e;
+  --color-game-muted: #4a4a6a;
+  --color-game-border: #b0bbd4;
+  color-scheme: light;
+}
+
 html,
 body {
   @apply bg-game-bg text-game-text;
+  /* Dark is the default; light mode selectors above override via higher specificity */
   color-scheme: dark;
 }
 
