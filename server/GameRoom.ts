@@ -201,6 +201,33 @@ export class GameRoom {
     return this.phase === "waiting" && this.players.size < 10;
   }
 
+  /** Reset all game state so the same players can play again from the lobby. */
+  resetToLobby(): void {
+    this.phase = "waiting";
+    this.currentRound = 0;
+    this.currentQuestion = null;
+    this.answers = new Map();
+    this.guessHistory = [];
+    this.roundScoreDeltas = new Map();
+    this.currentGuesserIndex = 0;
+    this.matchedPlayerIds = new Set();
+    this.usedQuestionIds = new Set();
+    this.generatedQuestionPrompts = [];
+    this.pendingQuestion = null;
+    this.prefetchingQuestion = false;
+    this.questionSet = "all";
+    this.customTheme = null;
+    this.answerDeadline = null;
+    if (this.answerTimer) {
+      clearTimeout(this.answerTimer);
+      this.answerTimer = null;
+    }
+    // Reset scores for all players and bots
+    for (const id of this.players.keys()) {
+      this.scores.set(id, 0);
+    }
+  }
+
   // ─── Phase transitions ──────────────────────────────────────────────────────
 
   /** Transition to the answering phase with the given question. */

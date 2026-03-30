@@ -236,6 +236,14 @@ export function registerSocketHandlers(
       }
     });
 
+    // ─── play_again ───────────────────────────────────────────────────────────
+    socket.on("play_again", () => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room || room.hostId !== socket.id || room.phase !== "game_end") return;
+      room.resetToLobby();
+      io.to(room.code).emit("lobby_update", room.toClientState());
+    });
+
     // ─── add_bot ──────────────────────────────────────────────────────────────
     socket.on("add_bot", () => {
       const room = gameManager.getRoomBySocketId(socket.id);

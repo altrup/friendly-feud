@@ -1,11 +1,10 @@
-import { useNavigate } from "react-router";
 import { useGame } from "../context/GameContext.js";
 import { ScoreBoard } from "./ScoreBoard.js";
 
 export function PhaseGameEnd() {
-  const { state } = useGame();
-  const navigate = useNavigate();
+  const { state, playAgain, leaveGame } = useGame();
   const winner = state.gameEnd?.winner;
+  const isHost = state.hostId === state.mySocketId;
 
   return (
     <div className="flex flex-col gap-8 items-center">
@@ -36,11 +35,23 @@ export function PhaseGameEnd() {
         />
       </div>
 
+      {isHost ? (
+        <button
+          onClick={playAgain}
+          className="bg-game-accent hover:bg-game-accent-hover text-white font-bold rounded-xl px-8 py-3 text-lg transition-colors"
+        >
+          Play Again
+        </button>
+      ) : (
+        <p className="text-game-muted animate-pulse">
+          Waiting for the host to start a new game…
+        </p>
+      )}
       <button
-        onClick={() => navigate("/")}
-        className="bg-game-accent hover:bg-game-accent-hover text-white font-bold rounded-xl px-8 py-3 text-lg transition-colors"
+        onClick={leaveGame}
+        className="text-game-muted text-sm underline hover:text-game-text transition-colors"
       >
-        Play Again
+        Leave game
       </button>
     </div>
   );
