@@ -43,6 +43,8 @@ export class GameRoom {
 
   /** Server-side timer for the answering phase timeout */
   private answerTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Unix ms timestamp when the answering phase ends; null outside answering phase */
+  answerDeadline: number | null = null;
 
   /** sessionId → socketId (for reconnection) */
   sessionToSocket: Map<string, string> = new Map();
@@ -181,6 +183,7 @@ export class GameRoom {
   /** Set the 60-second timeout for the answering phase. Stored so it can be cancelled early. */
   setAnswerTimer(callback: () => void): void {
     this.clearAnswerTimer();
+    this.answerDeadline = Date.now() + 60_000;
     this.answerTimer = setTimeout(callback, 60_000);
   }
 
@@ -189,6 +192,7 @@ export class GameRoom {
       clearTimeout(this.answerTimer);
       this.answerTimer = null;
     }
+    this.answerDeadline = null;
   }
 
   /** Transition to the guessing phase. */
@@ -310,6 +314,7 @@ export class GameRoom {
           : null,
       answeredPlayerIds: Array.from(this.answers.keys()),
       matchedPlayerIds: Array.from(this.matchedPlayerIds),
+      answerDeadline: this.answerDeadline,
     };
   }
 

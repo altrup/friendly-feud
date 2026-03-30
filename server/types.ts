@@ -35,6 +35,8 @@ export interface ClientGameState {
   answeredPlayerIds: string[];
   /** Which answers have already been matched (socket IDs of matched players) */
   matchedPlayerIds: string[];
+  /** Unix ms timestamp when the answering phase ends; null outside answering phase */
+  answerDeadline: number | null;
 }
 
 // ─── Socket Event Payload Types ───────────────────────────────────────────────

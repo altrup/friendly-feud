@@ -40,6 +40,7 @@ interface GameState {
   roundNumber: number;
   hostId: string | null;
   gameEnd: GameEndPayload | null;
+  answerDeadline: number | null;
   error: string | null;
 }
 
@@ -59,6 +60,7 @@ const initialState: GameState = {
   roundNumber: 0,
   hostId: null,
   gameEnd: null,
+  answerDeadline: null,
   error: null,
 };
 
@@ -103,6 +105,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       answeredPlayerIds: roomState.answeredPlayerIds,
       matchedPlayerIds: roomState.matchedPlayerIds,
       hostId: roomState.hostId,
+      answerDeadline: roomState.answerDeadline,
       currentRound: roomState.currentRound,
       roundNumber: roomState.currentRound,
       // Clear previous round data on new phase

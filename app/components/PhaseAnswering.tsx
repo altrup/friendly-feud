@@ -1,12 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useGame } from "../context/GameContext.js";
 
 export function PhaseAnswering() {
   const { state, submitAnswer } = useGame();
   const [answer, setAnswer] = useState("");
-  const hasSubmitted = state.answeredPlayerIds.includes(
-    state.mySocketId ?? ""
-  );
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardSize, setCardSize] = useState({ width: 0, height: 0 });
+  const [dashOffset, setDashOffset] = useState(0);
+  const [transitionDuration, setTransitionDuration] = useState(0);
+
+  const hasSubmitted = state.answeredPlayerIds.includes(state.mySocketId ?? "");
+
+  // Measure the card so the SVG overlay matches exactly
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      setCardSize({ width: el.offsetWidth, height: el.offsetHeight });
+    });
+    ro.observe(el);
+    setCardSize({ width: el.offsetWidth, height: el.offsetHeight });
+    return () => ro.disconnect();
+  }, []);
+
+  // Compute perimeter of the rounded rect (rounded-2xl = 1rem = 16px)
+  const strokeWidth = 3;
+  const inset = strokeWidth / 2;
+  const rx = 16;
+  const rw = Math.max(0, cardSize.width - strokeWidth);
+  const rh = Math.max(0, cardSize.height - strokeWidth);
+  const perimeter = rw > 0 && rh > 0 ? 2 * (rw + rh) + rx * (2 * Math.PI - 8) : 0;
+
+  // When the deadline or perimeter becomes known, snap to the current drain position
+  // then kick off a single CSS transition to the fully-drained state.
+  useEffect(() => {
+    if (!state.answerDeadline || perimeter === 0) return;
+
+    const remaining = Math.max(0, (state.answerDeadline - Date.now()) / 1000);
+    const startOffset = perimeter * (1 - remaining / 60);
+
+    // Snap to current position with no transition
+    setTransitionDuration(0);
+    setDashOffset(startOffset);
+
+    // Two rAFs: first lets React commit the snap, second starts the transition
+    let raf2: number;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setTransitionDuration(remaining);
+        setDashOffset(perimeter);
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [state.answerDeadline, perimeter]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,7 +69,29 @@ export function PhaseAnswering() {
   return (
     <div className="flex flex-col gap-6">
       {/* Question */}
-      <div className="bg-game-card rounded-2xl px-6 py-8 text-center">
+      <div ref={cardRef} className="relative bg-game-card rounded-2xl px-6 py-8 text-center">
+        {/* Timer border — drains via a single CSS transition, no JS polling */}
+        {perimeter > 0 && state.answerDeadline && (
+          <svg
+            className="absolute inset-0 pointer-events-none"
+            width={cardSize.width}
+            height={cardSize.height}
+          >
+            <rect
+              x={inset}
+              y={inset}
+              width={rw}
+              height={rh}
+              rx={rx}
+              fill="none"
+              stroke="var(--color-game-accent)"
+              strokeWidth={strokeWidth}
+              strokeDasharray={perimeter}
+              strokeDashoffset={dashOffset}
+              style={{ transition: `stroke-dashoffset ${transitionDuration}s linear` }}
+            />
+          </svg>
+        )}
         <p className="text-game-muted text-sm uppercase tracking-widest mb-3">
           Round {state.roundNumber} — {state.currentQuestion?.category}
         </p>
