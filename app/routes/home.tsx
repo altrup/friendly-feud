@@ -33,7 +33,7 @@ export default function Home() {
           Friendly Feud
         </h1>
         <p className="text-game-muted text-lg">
-          Play Family Feud — with your friends as the survey!
+          Play Family Feud with your friends as the survey!
         </p>
       </div>
 
