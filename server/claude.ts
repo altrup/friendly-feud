@@ -91,7 +91,7 @@ export async function checkGuessMatchBatch(
         role: "user",
         content:
           `You are judging a Family Feud game. For each candidate answer below, decide if it is semantically equivalent to the player's guess. ` +
-          `Ignore typos, different grammatical forms (e.g. "gaming" vs "play games"), and allow broad synonyms or categories (e.g. "mobile device" vs "phone"). Exact matches should always be accepted.\n\n` +
+          `Ignore typos, different grammatical forms (e.g. "gaming" vs "play games"), and allow broad synonyms or categories and focus solely on the core intent.\n\n` +
           `Question: "${question}"\nPlayer's guess: "${guess}"\n\nCandidate answers:\n${pairs}\n\n` +
           `Reply with exactly one line per candidate in the format "1: yes" or "1: no", nothing else.`,
       },
@@ -100,7 +100,6 @@ export async function checkGuessMatchBatch(
 
   const text =
     response.content[0].type === "text" ? response.content[0].text.trim() : "";
-
   // Parse "1: yes\n2: no\n..." into a boolean array
   const results: boolean[] = new Array(answers.length).fill(false);
   for (const line of text.split("\n")) {
