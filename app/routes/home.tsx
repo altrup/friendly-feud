@@ -60,6 +60,7 @@ export default function Home() {
             value={createName}
             onChange={(e) => setCreateName(e.target.value)}
             maxLength={24}
+            autoComplete="off"
             className="bg-game-card border border-game-border rounded-lg px-4 py-2 text-game-text placeholder-game-muted focus:outline-none focus:border-game-accent"
           />
           <button
@@ -86,6 +87,7 @@ export default function Home() {
             value={joinName}
             onChange={(e) => setJoinName(e.target.value)}
             maxLength={24}
+            autoComplete="off"
             className="bg-game-card border border-game-border rounded-lg px-4 py-2 text-game-text placeholder-game-muted focus:outline-none focus:border-game-accent"
           />
           <input
