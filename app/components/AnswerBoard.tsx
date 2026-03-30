@@ -34,12 +34,11 @@ export function AnswerBoard({
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {players.map((player) => {
         const wasGuessed = matchedPlayerIds.includes(player.id);
-        const isRevealed = wasGuessed || !!revealedAnswers;
-        const answer = revealedAnswers
-          ? revealedAnswers[player.id]
-          : isRevealed
-            ? "✓"
-            : null;
+        // revealedAnswers may be partial (only matched players during guessing)
+        // or full (all players at round end). A slot is revealed if it has an entry.
+        const hasRevealedAnswer = revealedAnswers != null && player.id in revealedAnswers;
+        const isRevealed = wasGuessed || hasRevealedAnswer;
+        const answer = revealedAnswers?.[player.id] ?? null;
         const delta = lastScoreDeltas?.[player.id];
         const guesserId = guesserForAnswer.get(player.id);
         const guesserName = guesserId

@@ -16,11 +16,15 @@ export function PhaseGuessing() {
     (p) => p.id === state.currentGuesserSocketId
   );
 
-  // Show guess result flash for 2 seconds
+  // Accumulate revealed answers (guess text) as matches come in during guessing
+  const [revealedGuesses, setRevealedGuesses] = useState<Record<string, string>>({});
+
+  // Show guess result flash for 2 seconds, and record matched answer text
   useEffect(() => {
     if (!state.lastGuessResult) return;
     const r = state.lastGuessResult;
-    if (r.matched) {
+    if (r.matched && r.matchedPlayerId && r.matchedAnswer) {
+      setRevealedGuesses((prev) => ({ ...prev, [r.matchedPlayerId!]: r.matchedAnswer! }));
       setFlashResult({ correct: true, text: `✓ "${r.matchedAnswer}" — matched!` });
     } else {
       setFlashResult({ correct: false, text: `✗ "${r.guess}" — no match` });
@@ -66,6 +70,7 @@ export function PhaseGuessing() {
       <AnswerBoard
         players={state.players}
         matchedPlayerIds={state.matchedPlayerIds}
+        revealedAnswers={revealedGuesses}
         lastScoreDeltas={
           state.lastGuessResult?.matched
             ? state.lastGuessResult.scoreDeltas
