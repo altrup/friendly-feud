@@ -1,6 +1,9 @@
 # Friendly Feud — Claude Code Session Notes
 
-> **Note for future sessions:** This file is the source of truth for project architecture and decisions. Keep it up to date as the project evolves — update structure diagrams when files are added/removed, revise socket events when the API changes, check off completed status items, and add new decisions or notes as they come up.
+> **Notes for future sessions:** 
+> - This file is the source of truth for project architecture and decisions. Implement all code following this file's architecture and decisions. When changing architecture or decisions, always update this file before implementing code. 
+> - Use comments when necessary to explain code implementation
+> - Never hard code colors in tailwind, always define colors used in `app/app.css` `@theme` 
 
 ## Overview
 
