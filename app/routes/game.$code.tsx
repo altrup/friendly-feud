@@ -38,7 +38,9 @@ export default function GameRoute() {
   }
 
   const showSidebar =
-    state.phase !== "game_end" && state.players.length > 0;
+    state.phase !== "game_end" &&
+    state.phase !== "round_end" &&
+    state.players.length > 0;
 
   return (
     <main className="min-h-screen bg-game-bg flex flex-col lg:flex-row">
