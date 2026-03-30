@@ -116,7 +116,7 @@ export function PlayerList({
                       onBlur={() => handleNameBlur(player.id, player.name)}
                       onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-36 bg-game-surface border border-game-border text-game-text font-medium rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-game-accent"
+                      className="w-48 bg-game-surface border border-game-border text-game-text font-medium rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-game-accent"
                     />
                   ) : (
                     <span
