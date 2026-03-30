@@ -104,5 +104,6 @@ export interface ClientToServerEvents {
   add_bot: () => void;
   remove_bot: (data: { botId: string }) => void;
   update_bot_personality: (data: { botId: string; personality: string }) => void;
+  rename_bot: (data: { botId: string; name: string }) => void;
   kick_player: (data: { playerId: string }) => void;
 }

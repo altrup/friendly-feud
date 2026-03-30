@@ -8,6 +8,7 @@ interface Props {
   isHost?: boolean;
   onRemoveBot?: (botId: string) => void;
   onUpdateBotPersonality?: (botId: string, personality: string) => void;
+  onRenameBot?: (botId: string, name: string) => void;
   onKickPlayer?: (playerId: string) => void;
 }
 
@@ -18,18 +19,24 @@ export function PlayerList({
   isHost,
   onRemoveBot,
   onUpdateBotPersonality,
+  onRenameBot,
   onKickPlayer,
 }: Props) {
   const [expandedBots, setExpandedBots] = useState<Set<string>>(new Set());
-  // Track pending edits locally so the input doesn't wait for a round-trip
-  const [pendingPersonalities, setPendingPersonalities] = useState<
-    Record<string, string>
-  >({});
+  // Track pending edits locally so the inputs don't wait for a round-trip
+  const [pendingPersonalities, setPendingPersonalities] = useState<Record<string, string>>({});
+  const [pendingNames, setPendingNames] = useState<Record<string, string>>({});
 
-  function toggleBot(id: string) {
+  function toggleBot(id: string, currentName: string) {
     setExpandedBots((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+        // Seed the pending name so the input is pre-filled
+        setPendingNames((p) => ({ ...p, [id]: p[id] ?? currentName }));
+      }
       return next;
     });
   }
@@ -45,6 +52,20 @@ export function PlayerList({
     }
   }
 
+  function handleNameChange(botId: string, value: string) {
+    setPendingNames((prev) => ({ ...prev, [botId]: value }));
+  }
+
+  function handleNameBlur(botId: string, fallbackName: string) {
+    const value = (pendingNames[botId] ?? "").trim();
+    if (value && value !== fallbackName && onRenameBot) {
+      onRenameBot(botId, value);
+    } else if (!value) {
+      // Reset to the current name if left empty
+      setPendingNames((prev) => ({ ...prev, [botId]: fallbackName }));
+    }
+  }
+
   const sorted = [...players].sort((a, b) => {
     if (!!a.isBot !== !!b.isBot) return a.isBot ? 1 : -1;
     return a.name.localeCompare(b.name);
@@ -54,8 +75,8 @@ export function PlayerList({
     <ul className="flex flex-col gap-2">
       {sorted.map((player) => {
         const isExpanded = expandedBots.has(player.id);
-        const personality =
-          pendingPersonalities[player.id] ?? player.botPersonality ?? "";
+        const personality = pendingPersonalities[player.id] ?? player.botPersonality ?? "";
+        const pendingName = pendingNames[player.id] ?? player.name;
         // Host can expand bots to edit personality; non-host can also expand bots to view
         const canExpand = player.isBot;
         const canKick = isHost && player.id !== currentPlayerId;
@@ -65,7 +86,7 @@ export function PlayerList({
             {/* Main row */}
             <li
               className={`flex items-center gap-2 -ml-5 ${canExpand && isHost ? "cursor-pointer" : ""}`}
-              onClick={canExpand && isHost ? () => toggleBot(player.id) : undefined}
+              onClick={canExpand && isHost ? () => toggleBot(player.id, player.name) : undefined}
             >
               <div className="w-3 flex-shrink-0 flex items-center justify-center">
                 {player.isBot && isHost && (
@@ -87,20 +108,28 @@ export function PlayerList({
               <div className="flex items-center grow gap-2 px-4 py-2">
                 {/* Name + badges */}
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span
-                    className={`font-medium ${
-                      player.id === currentPlayerId
-                        ? "text-game-gold"
-                        : "text-game-text"
-                    }`}
-                  >
-                    {player.name}
-                    {player.id === currentPlayerId && (
-                      <span className="ml-1 text-xs text-game-muted">
-                        (you)
-                      </span>
-                    )}
-                  </span>
+                  {player.isBot && isHost && isExpanded && onRenameBot ? (
+                    <input
+                      type="text"
+                      value={pendingName}
+                      onChange={(e) => handleNameChange(player.id, e.target.value)}
+                      onBlur={() => handleNameBlur(player.id, player.name)}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-medium text-game-text bg-transparent border-b border-game-border focus:border-game-accent focus:outline-none w-32 min-w-0"
+                    />
+                  ) : (
+                    <span
+                      className={`font-medium ${
+                        player.id === currentPlayerId ? "text-game-gold" : "text-game-text"
+                      }`}
+                    >
+                      {player.name}
+                      {player.id === currentPlayerId && (
+                        <span className="ml-1 text-xs text-game-muted">(you)</span>
+                      )}
+                    </span>
+                  )}
                   {player.isHost && (
                     <span className="text-xs bg-game-accent/20 text-game-accent px-2 py-0.5 rounded-full">
                       host

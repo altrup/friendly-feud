@@ -116,6 +116,13 @@ export class GameRoom {
     }
   }
 
+  renameBot(botId: string, name: string): void {
+    const bot = this.players.get(botId);
+    if (bot && bot.isBot) {
+      this.players.set(botId, { ...bot, name: name.trim() });
+    }
+  }
+
   removePlayer(socketId: string): void {
     this.players.delete(socketId);
     this.playerOrder = this.playerOrder.filter((id) => id !== socketId);

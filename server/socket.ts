@@ -262,6 +262,15 @@ export function registerSocketHandlers(
       io.to(room.code).emit("lobby_update", room.toClientState());
     });
 
+    // ─── rename_bot ───────────────────────────────────────────────────────────
+    socket.on("rename_bot", ({ botId, name }) => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room || room.hostId !== socket.id || room.phase !== "waiting") return;
+      if (!name?.trim()) return;
+      room.renameBot(botId, name);
+      io.to(room.code).emit("lobby_update", room.toClientState());
+    });
+
     // ─── kick_player ──────────────────────────────────────────────────────────
     socket.on("kick_player", ({ playerId }) => {
       const room = gameManager.getRoomBySocketId(socket.id);

@@ -89,6 +89,7 @@ interface GameContextValue {
   addBot: () => void;
   removeBot: (botId: string) => void;
   updateBotPersonality: (botId: string, personality: string) => void;
+  renameBot: (botId: string, name: string) => void;
   kickPlayer: (playerId: string) => void;
 }
 
@@ -394,6 +395,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [socket]
   );
 
+  const renameBot = useCallback(
+    (botId: string, name: string) => {
+      socket.emit("rename_bot", { botId, name });
+    },
+    [socket]
+  );
+
   const kickPlayer = useCallback(
     (playerId: string) => {
       socket.emit("kick_player", { playerId });
@@ -418,6 +426,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         addBot,
         removeBot,
         updateBotPersonality,
+        renameBot,
         kickPlayer,
       }}
     >
