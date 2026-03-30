@@ -21,7 +21,9 @@ export default function LobbyRoute() {
   const [customTheme, setCustomTheme] = useState("");
   const customThemePlaceholder = "Enter a custom theme…";
   const inputMirrorRef = useRef<HTMLSpanElement>(null);
+  const questionSetContainerRef = useRef<HTMLDivElement>(null);
   const [inputWidth, setInputWidth] = useState<number | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
 
   // Re-measure whenever the text changes so the input tracks actual rendered width
   useEffect(() => {
@@ -29,6 +31,17 @@ export default function LobbyRoute() {
       setInputWidth(inputMirrorRef.current.offsetWidth);
     }
   }, [customTheme, mounted]);
+
+  // Measure parent container width for input max-width
+  useEffect(() => {
+    if (!questionSetContainerRef.current) return;
+    setContainerWidth(questionSetContainerRef.current.clientWidth);
+    const observer = new ResizeObserver(([entry]) => {
+      setContainerWidth(entry.contentRect.width);
+    });
+    observer.observe(questionSetContainerRef.current);
+    return () => observer.disconnect();
+  }, [mounted]);
 
   // Fetch available categories from the server
   useEffect(() => {
@@ -111,26 +124,28 @@ export default function LobbyRoute() {
               <p className="text-game-muted text-xs uppercase tracking-widest">
                 Question Set
               </p>
-              <div className="flex flex-wrap justify-center gap-2 max-w-sm">
-                {/* "All" first, then categories, then "Custom" (with inline theme input) last */}
-                {[{ key: "all" }, ...categories.map((c) => ({ key: c }))].map(({ key }) => {
-                  const meta = CATEGORY_META[key] ?? { emoji: "❓", label: key };
-                  const selected = selectedQuestionSet === key;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setSelectedQuestionSet(key)}
-                      className={`flex flex-col items-center justify-evenly px-3 py-2 h-16 rounded-xl border text-sm font-medium transition-colors ${
-                        selected
-                          ? "bg-game-accent/20 border-game-accent text-game-text"
-                          : "bg-game-surface border-game-border text-game-muted hover:border-game-accent hover:text-game-text"
-                      }`}
-                    >
-                      <span className="text-xl leading-none">{meta.emoji}</span>
-                      <span className="text-xs">{meta.label}</span>
-                    </button>
-                  );
-                })}
+              <div ref={questionSetContainerRef} className="flex flex-col items-center gap-2 max-w-sm">
+                {/* Regular category buttons */}
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[{ key: "all" }, ...categories.map((c) => ({ key: c }))].map(({ key }) => {
+                    const meta = CATEGORY_META[key] ?? { emoji: "❓", label: key };
+                    const selected = selectedQuestionSet === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedQuestionSet(key)}
+                        className={`flex flex-col items-center justify-evenly px-3 py-2 h-16 rounded-xl border text-sm font-medium transition-colors ${
+                          selected
+                            ? "bg-game-accent/20 border-game-accent text-game-text"
+                            : "bg-game-surface border-game-border text-game-muted hover:border-game-accent hover:text-game-text"
+                        }`}
+                      >
+                        <span className="text-xl leading-none">{meta.emoji}</span>
+                        <span className="text-xs">{meta.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
                 {/* Custom button + inline theme input — label ties them together so clicking the button text focuses the input */}
                 {(() => {
                   const selected = selectedQuestionSet === "custom";
@@ -139,7 +154,7 @@ export default function LobbyRoute() {
                     <label
                       htmlFor="custom-theme-input"
                       onClick={() => setSelectedQuestionSet("custom")}
-                      className={`flex items-center gap-2 px-3 py-2 h-14 rounded-xl border text-sm font-medium transition-colors cursor-pointer ${
+                      className={`flex items-center gap-2 px-3 py-2 h-14 rounded-xl border text-sm font-medium transition-colors cursor-pointer overflow-hidden ${
                         selected
                           ? "bg-game-accent/20 border-game-accent text-game-text"
                           : "bg-game-surface border-game-border text-game-muted hover:border-game-accent hover:text-game-text"
@@ -157,8 +172,8 @@ export default function LobbyRoute() {
                       <span className="text-xl leading-none">{meta.emoji}</span>
                       {/* Wrapper animates width so the input never scrolls */}
                       <div style={{
-                        width: inputWidth != null ? inputWidth + 8 : undefined,
-                        maxWidth: "24rem",
+                        width: inputWidth != null ? inputWidth + 4 : undefined,
+                        maxWidth: containerWidth != null ? containerWidth - 100 : undefined,
                         transition: "width 0.15s ease",
                       }}>
                         <input
@@ -169,7 +184,7 @@ export default function LobbyRoute() {
                           onChange={(e) => setCustomTheme(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
                           placeholder={customThemePlaceholder}
-                          style={{ width: inputWidth != null ? inputWidth + 16 : undefined, maxWidth: "24rem" }}
+                          style={{ width: inputWidth != null ? inputWidth + 16 : undefined, maxWidth: containerWidth != null ? containerWidth - 100 : undefined }}
                           className="bg-transparent border-none outline-none text-game-text placeholder:text-game-muted text-sm"
                         />
                       </div>
