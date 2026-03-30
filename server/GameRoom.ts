@@ -125,10 +125,14 @@ export class GameRoom {
    * Handles matching, scoring, and marking answers as revealed.
    */
   async processGuess(guesserId: string, guess: string): Promise<GuessResult> {
+    // Exclude the guesser's own answer from matching
+    const excludedIds = new Set(this.matchedPlayerIds);
+    excludedIds.add(guesserId);
+
     const matchedSocketId = await matchGuessAsync(
       guess,
       this.answers,
-      this.matchedPlayerIds
+      excludedIds
     );
 
     if (!matchedSocketId) {
