@@ -155,21 +155,24 @@ export default function LobbyRoute() {
                         {customTheme || customThemePlaceholder}
                       </span>
                       <span className="text-xl leading-none">{meta.emoji}</span>
-                      <input
-                        id="custom-theme-input"
-                        type="text"
-                        value={customTheme}
-                        onFocus={() => setSelectedQuestionSet("custom")}
-                        onChange={(e) => setCustomTheme(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-                        placeholder={customThemePlaceholder}
-                        style={{
-                          width: inputWidth != null ? inputWidth + 8 : undefined,
-                          maxWidth: "24rem",
-                          transition: "width 0.15s ease",
-                        }}
-                        className="bg-transparent border-none outline-none text-game-text placeholder:text-game-muted text-sm text-center"
-                      />
+                      {/* Wrapper animates width so the input never scrolls */}
+                      <div style={{
+                        width: inputWidth != null ? inputWidth + 8 : undefined,
+                        maxWidth: "24rem",
+                        transition: "width 0.15s ease",
+                      }}>
+                        <input
+                          id="custom-theme-input"
+                          type="text"
+                          value={customTheme}
+                          onFocus={() => setSelectedQuestionSet("custom")}
+                          onChange={(e) => setCustomTheme(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                          placeholder={customThemePlaceholder}
+                          style={{ width: inputWidth != null ? inputWidth + 16 : undefined, maxWidth: "24rem" }}
+                          className="bg-transparent border-none outline-none text-game-text placeholder:text-game-muted text-sm"
+                        />
+                      </div>
                     </label>
                   );
                 })()}
