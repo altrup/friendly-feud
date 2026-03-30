@@ -24,27 +24,3 @@ A real-time multiplayer web game inspired by Family Feud. Instead of 100 surveye
 | Styling | Tailwind CSS v4 |
 | Language | TypeScript throughout |
 | Build | Vite + `@react-router/dev` |
-
-## Project Structure
-
-```
-friendly-feud/
-├── server/               # Express backend
-│   ├── app.ts            # Express app entry point
-│   └── data/             # Question bank and other static data
-├── app/                  # React Router frontend
-│   ├── root.tsx          # App shell
-│   ├── routes.ts         # Route definitions
-│   ├── app.css           # Global styles + Tailwind @theme color definitions
-│   ├── routes/
-│   │   └── home.tsx      # "/" — create or join lobby
-│   ├── hooks/            # (planned) Custom React hooks (e.g. useSocket.ts)
-│   └── components/       # (planned) Shared UI components
-├── public/               # Static assets
-│   └── favicon.ico
-├── server.js             # Node entry — imports server/app.ts, starts HTTP server
-├── react-router.config.ts
-├── vite.config.ts
-├── tsconfig.json
-└── Dockerfile
-```
