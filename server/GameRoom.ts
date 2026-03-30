@@ -4,7 +4,7 @@
 
 import type { ClientGameState, GamePhase, Player, Question } from "./types.js";
 import { matchGuessAsync } from "./matching.js";
-import { computeScoreDeltas, findMatchedIds } from "./scoring.js";
+import { computeScoreDeltas } from "./scoring.js";
 
 export interface GuessResult {
   matched: boolean;
@@ -231,17 +231,14 @@ export class GameRoom {
    * Handles matching, scoring, and marking answers as revealed.
    */
   async processGuess(guesserId: string, guess: string): Promise<GuessResult> {
-    // Exclude the guesser's own answer from matching
+    // Exclude already-matched answers and the guesser's own answer from candidates
     const excludedIds = new Set(this.matchedPlayerIds);
     excludedIds.add(guesserId);
 
-    const matchedSocketId = await matchGuessAsync(
-      guess,
-      this.answers,
-      excludedIds
-    );
+    // Returns all socket IDs whose answer matches the guess (guesser already excluded)
+    const matchedIds = await matchGuessAsync(guess, this.answers, excludedIds);
 
-    if (!matchedSocketId) {
+    if (matchedIds.length === 0) {
       this.guessHistory.push({ guesserId, guess, matched: false, matchedPlayerId: null });
       return {
         matched: false,
@@ -252,30 +249,26 @@ export class GameRoom {
       };
     }
 
-    // Find all players who gave the same answer (shared answer handling)
-    const matchedAnswer = this.answers.get(matchedSocketId)!;
-    const matchedIds = findMatchedIds(
-      this.answers,
-      matchedAnswer.trim().toLowerCase()
-    );
-
     // Mark all matched players so their answers can't be guessed again
     for (const id of matchedIds) {
       this.matchedPlayerIds.add(id);
     }
 
-    // Compute and apply score deltas
+    // Compute and apply score deltas. The guesser is already absent from matchedIds
+    // (excluded above), so no double-counting when they shared an answer.
     const scoreDeltas = computeScoreDeltas(guesserId, matchedIds);
     for (const [id, delta] of scoreDeltas) {
       this.scores.set(id, (this.scores.get(id) ?? 0) + delta);
       this.roundScoreDeltas.set(id, (this.roundScoreDeltas.get(id) ?? 0) + delta);
     }
 
-    this.guessHistory.push({ guesserId, guess, matched: true, matchedPlayerId: matchedSocketId });
+    const matchedPlayerId = matchedIds[0];
+    const matchedAnswer = this.answers.get(matchedPlayerId)!;
+    this.guessHistory.push({ guesserId, guess, matched: true, matchedPlayerId });
     return {
       matched: true,
-      matchedPlayerId: matchedSocketId,
-      matchedAnswer: matchedAnswer,
+      matchedPlayerId,
+      matchedAnswer,
       matchedIds,
       scoreDeltas,
     };

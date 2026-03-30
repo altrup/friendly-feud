@@ -92,23 +92,24 @@ async function aiMatch(guess: string, answer: string): Promise<boolean> {
  * Matches a guess against a map of candidate answers using the configured strategy.
  * In AI mode, checks each candidate individually (slower but more forgiving).
  *
- * Returns the first matched socket ID, or null.
+ * Returns all matched socket IDs (empty array if none match).
  */
 export async function matchGuessAsync(
   guess: string,
   answers: Map<string, string>,
   excludedIds: Set<string>
-): Promise<string | null> {
+): Promise<string[]> {
   const useAI = process.env.USE_AI_MATCHING === "true";
+  const matched: string[] = [];
 
   for (const [socketId, answer] of answers) {
     if (excludedIds.has(socketId)) continue;
 
-    const matched = useAI
+    const isMatch = useAI
       ? await aiMatch(guess, answer)
       : basicMatch(guess, answer);
 
-    if (matched) return socketId;
+    if (isMatch) matched.push(socketId);
   }
-  return null;
+  return matched;
 }
