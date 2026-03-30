@@ -2,8 +2,7 @@
 
 > **Notes for future sessions:** 
 > - Use comments when necessary to explain code implementation
-> - Never hard code colors in tailwind, always define colors used in `app/app.css` `@theme` 
-> - All API endpoint should be seperate files
+> - Never hard code colors in tailwind, always define colors used in `app/app.css` `@theme`
 
 ## Overview
 
