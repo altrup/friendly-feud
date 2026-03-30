@@ -22,7 +22,7 @@ export class GameManager {
     for (const file of files) {
       const categoryKey = basename(file, ".json");
       const questions = JSON.parse(
-        readFileSync(join(categoriesDir, file), "utf-8")
+        readFileSync(join(categoriesDir, file), "utf-8"),
       ) as Question[];
       this.questionsByCategory.set(categoryKey, questions);
       this.allQuestions.push(...questions);
@@ -73,7 +73,7 @@ export class GameManager {
    */
   async getCustomQuestion(
     theme: string,
-    previousPrompts: string[]
+    previousPrompts: string[],
   ): Promise<Question> {
     try {
       const Anthropic = (await import("@anthropic-ai/sdk")).default;
@@ -92,8 +92,10 @@ export class GameManager {
             role: "user",
             content:
               `Generate a single Family Feud-style question on the theme "${theme}". ` +
-              `Rules: direct it at the player using "you" (e.g. "Name something you..."), ` +
-              `it should invite many different answers, keep it fun and conversational, ` +
+              `Rules: direct it at the player using "you" (e.g. "Name a reason you...", ` +
+              `"What's something you...", "Name a place where you...", "Name something you...", etc). ` +
+              `Vary the phrasing each time; don't use the same phrase. ` +
+              `It should invite many different answers, keep it fun and conversational, ` +
               `and return ONLY the question text with no extra commentary.` +
               avoidSection,
           },
@@ -142,7 +144,7 @@ export class GameManager {
     do {
       code = Array.from(
         { length: 4 },
-        () => chars[Math.floor(Math.random() * chars.length)]
+        () => chars[Math.floor(Math.random() * chars.length)],
       ).join("");
     } while (this.rooms.has(code));
     return code;
