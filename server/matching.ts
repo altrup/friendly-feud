@@ -71,7 +71,7 @@ async function aiMatch(guess: string, answer: string): Promise<boolean> {
       messages: [
         {
           role: "user",
-          content: `Are these two answers semantically equivalent for a Family Feud-style game? Typos or misspellings should be ignored if the intent is clear. Answer only "yes" or "no".\nAnswer 1: "${answer}"\nAnswer 2: "${guess}"`,
+          content: `Are these semantically equivalent for Family Feud? Ignore typos, different grammatical forms (e.g., "gaming" vs "play games"), and allow broad synonyms or categories (e.g., "mobile device" vs "phone"). Answer only "yes" or "no".\nAnswer 1: "${answer}"\nAnswer 2: "${guess}"`,
         },
       ],
     });
