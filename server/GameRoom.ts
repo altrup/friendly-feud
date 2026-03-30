@@ -47,8 +47,14 @@ export class GameRoom {
   /** Questions used in this game session (to avoid repeats) */
   usedQuestionIds: Set<string> = new Set();
 
-  /** The question set chosen by the host ("all" or a category name) */
+  /** The question set chosen by the host ("all", a category name, or "custom") */
   questionSet: string = "all";
+
+  /** Custom theme text entered by the host (only used when questionSet === "custom") */
+  customTheme: string | null = null;
+
+  /** Prompts already generated for this room's custom theme (to avoid repeats) */
+  generatedQuestionPrompts: string[] = [];
 
   /** Server-side timer for the answering phase timeout */
   private answerTimer: ReturnType<typeof setTimeout> | null = null;

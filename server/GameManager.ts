@@ -66,6 +66,58 @@ export class GameManager {
 
   // ─── Question selection ──────────────────────────────────────────────────────
 
+  /**
+   * Generate a single custom question via Claude Haiku based on the host's theme.
+   * previousPrompts are passed so Claude avoids repeating questions within a session.
+   * Falls back to the "all" pool if the API call fails.
+   */
+  async getCustomQuestion(
+    theme: string,
+    previousPrompts: string[]
+  ): Promise<Question> {
+    try {
+      const Anthropic = (await import("@anthropic-ai/sdk")).default;
+      const client = new Anthropic();
+
+      const avoidSection =
+        previousPrompts.length > 0
+          ? `\n\nDo NOT repeat any of these already-used questions:\n${previousPrompts.map((p) => `- ${p}`).join("\n")}`
+          : "";
+
+      const response = await client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 60,
+        messages: [
+          {
+            role: "user",
+            content:
+              `Generate a single Family Feud-style question on the theme "${theme}". ` +
+              `Rules: direct it at the player using "you" (e.g. "Name something you'd bring ..."), ` +
+              `it should invite many different answers, keep it fun and conversational, ` +
+              `and return ONLY the question text with no extra commentary.` +
+              avoidSection,
+          },
+        ],
+      });
+
+      const prompt =
+        response.content[0].type === "text"
+          ? response.content[0].text.trim()
+          : null;
+
+      if (prompt) {
+        return { id: `custom-${Date.now()}`, prompt, category: theme };
+      }
+    } catch (e) {
+      console.error("Custom question generation failed, falling back:", e);
+    }
+
+    // Fallback: pick a random question from the full pool
+    const fallback =
+      this.allQuestions[Math.floor(Math.random() * this.allQuestions.length)];
+    return fallback;
+  }
+
   /** Pick a random question from the given set that hasn't been used yet. */
   getRandomQuestion(usedIds: Set<string>, questionSet: string): Question {
     const pool =

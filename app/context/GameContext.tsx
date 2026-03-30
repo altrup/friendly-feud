@@ -77,7 +77,7 @@ interface GameContextValue {
   createLobby: (playerName: string) => void;
   joinLobby: (code: string, playerName: string) => void;
   leaveGame: () => void;
-  startGame: (questionSet: string) => void;
+  startGame: (questionSet: string, customTheme?: string) => void;
   submitAnswer: (answer: string) => void;
   submitGuess: (guess: string) => void;
   nextRound: () => void;
@@ -322,8 +322,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [socket, navigate]);
 
   const startGame = useCallback(
-    (questionSet: string) => {
-      socket.emit("start_game", { questionSet });
+    (questionSet: string, customTheme?: string) => {
+      socket.emit("start_game", { questionSet, customTheme });
     },
     [socket]
   );

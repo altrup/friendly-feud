@@ -18,6 +18,7 @@ export default function LobbyRoute() {
 
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedQuestionSet, setSelectedQuestionSet] = useState("all");
+  const [customTheme, setCustomTheme] = useState("");
 
   // Fetch available categories from the server
   useEffect(() => {
@@ -62,6 +63,7 @@ export default function LobbyRoute() {
     technology:    { emoji: "💻", label: "Technology" },
     travel:        { emoji: "✈️", label: "Travel" },
     work:          { emoji: "💼", label: "Work" },
+    custom:        { emoji: "🪄", label: "Custom" },
   };
 
   return (
@@ -100,8 +102,8 @@ export default function LobbyRoute() {
                 Question Set
               </p>
               <div className="flex flex-wrap justify-center gap-2 max-w-sm">
-                {/* "All" tile always first */}
-                {[{ key: "all" }, ...categories.map((c) => ({ key: c }))].map(({ key }) => {
+                {/* "All" first, then categories, then "Custom" last */}
+                {[{ key: "all" }, ...categories.map((c) => ({ key: c })), { key: "custom" }].map(({ key }) => {
                   const meta = CATEGORY_META[key] ?? { emoji: "❓", label: key };
                   const selected = selectedQuestionSet === key;
                   return (
@@ -122,9 +124,20 @@ export default function LobbyRoute() {
               </div>
             </div>
 
+            {/* Theme input — only shown when custom mode is selected */}
+            {selectedQuestionSet === "custom" && (
+              <input
+                type="text"
+                value={customTheme}
+                onChange={(e) => setCustomTheme(e.target.value)}
+                placeholder="Enter a theme (e.g. camping, 90s movies…)"
+                className="w-full max-w-sm bg-game-surface border border-game-border text-game-text placeholder:text-game-muted rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-game-accent"
+              />
+            )}
+
             <button
-              onClick={() => startGame(selectedQuestionSet)}
-              disabled={!canStart}
+              onClick={() => startGame(selectedQuestionSet, selectedQuestionSet === "custom" ? customTheme : undefined)}
+              disabled={!canStart || (selectedQuestionSet === "custom" && !customTheme.trim())}
               className="bg-game-accent hover:bg-game-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl px-10 py-4 text-xl transition-colors"
             >
               Start Game
@@ -132,6 +145,11 @@ export default function LobbyRoute() {
             {!canStart && (
               <p className="text-game-muted text-sm">
                 Need at least 2 players to start.
+              </p>
+            )}
+            {canStart && selectedQuestionSet === "custom" && !customTheme.trim() && (
+              <p className="text-game-muted text-sm">
+                Enter a theme to start.
               </p>
             )}
           </>

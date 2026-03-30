@@ -6,6 +6,7 @@ import type { Server, Socket } from "socket.io";
 import type {
   ClientToServerEvents,
   GameEndPayload,
+  Question,
   ServerToClientEvents,
 } from "./types.js";
 import type { GameManager } from "./GameManager.js";
@@ -80,7 +81,7 @@ export function registerSocketHandlers(
     });
 
     // ─── start_game ────────────────────────────────────────────────────────────
-    socket.on("start_game", ({ questionSet }) => {
+    socket.on("start_game", async ({ questionSet, customTheme }) => {
       const room = gameManager.getRoomBySocketId(socket.id);
       if (!room) return;
       if (room.hostId !== socket.id) {
@@ -97,7 +98,15 @@ export function registerSocketHandlers(
       }
 
       room.questionSet = questionSet ?? "all";
-      const question = gameManager.getRandomQuestion(room.usedQuestionIds, room.questionSet);
+      room.customTheme = customTheme?.trim() || null;
+
+      let question: Question;
+      if (room.questionSet === "custom" && room.customTheme) {
+        question = await gameManager.getCustomQuestion(room.customTheme, room.generatedQuestionPrompts);
+        room.generatedQuestionPrompts.push(question.prompt);
+      } else {
+        question = gameManager.getRandomQuestion(room.usedQuestionIds, room.questionSet);
+      }
       room.startAnsweringPhase(question);
 
       // Start a 60-second timer; auto-advance to guessing if time runs out
@@ -184,7 +193,7 @@ export function registerSocketHandlers(
     });
 
     // ─── next_round ────────────────────────────────────────────────────────────
-    socket.on("next_round", () => {
+    socket.on("next_round", async () => {
       const room = gameManager.getRoomBySocketId(socket.id);
       if (!room || room.hostId !== socket.id) return;
       if (room.phase !== "round_end") return;
@@ -193,7 +202,13 @@ export function registerSocketHandlers(
       if (outcome === "game_end") {
         emitGameEnd(io, room);
       } else {
-        const question = gameManager.getRandomQuestion(room.usedQuestionIds, room.questionSet);
+        let question: Question;
+        if (room.questionSet === "custom" && room.customTheme) {
+          question = await gameManager.getCustomQuestion(room.customTheme, room.generatedQuestionPrompts);
+          room.generatedQuestionPrompts.push(question.prompt);
+        } else {
+          question = gameManager.getRandomQuestion(room.usedQuestionIds, room.questionSet);
+        }
         room.startAnsweringPhase(question);
 
         room.setAnswerTimer(() => {

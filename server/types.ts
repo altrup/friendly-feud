@@ -88,7 +88,7 @@ export interface ClientToServerEvents {
   join_lobby: (data: { code: string; playerName: string }) => void;
   rejoin_session: (data: { sessionId: string; roomCode: string }) => void;
   leave_game: () => void;
-  start_game: (data: { questionSet: string }) => void;
+  start_game: (data: { questionSet: string; customTheme?: string }) => void;
   submit_answer: (data: { answer: string }) => void;
   /** targetPlayerId is optional for MVP — server matches against all unguessed answers */
   submit_guess: (data: { guess: string; targetPlayerId?: string }) => void;
