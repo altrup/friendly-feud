@@ -18,6 +18,12 @@ declare module "react-router" {
 
 export const app = express();
 
+// Exclude Socket.io polling paths so they aren't intercepted by React Router
+app.use((req, res, next) => {
+  if (req.path.startsWith("/socket.io")) return next("router");
+  next();
+});
+
 app.use(
   createRequestHandler({
     build: () => import("virtual:react-router/server-build"),
