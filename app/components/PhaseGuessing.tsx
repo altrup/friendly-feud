@@ -18,15 +18,27 @@ export function PhaseGuessing() {
 
   // Accumulate revealed answers (guess text) as matches come in during guessing
   const [revealedGuesses, setRevealedGuesses] = useState<Record<string, string>>({});
+  // Track who guessed each matched answer so AnswerBoard can display it
+  const [guessHistory, setGuessHistory] = useState<
+    { guesserId: string; guess: string; matched: boolean; matchedPlayerId: string | null }[]
+  >([]);
 
-  // Show guess result flash for 2 seconds, and record matched answer text
+  // Show guess result flash for 2 seconds, and record matched answer text + guesser
   useEffect(() => {
     if (!state.lastGuessResult) return;
     const r = state.lastGuessResult;
     if (r.matched && r.matchedPlayerId && r.matchedAnswer) {
       setRevealedGuesses((prev) => ({ ...prev, [r.matchedPlayerId!]: r.matchedAnswer! }));
+      setGuessHistory((prev) => [
+        ...prev,
+        { guesserId: r.guesserId, guess: r.guess, matched: true, matchedPlayerId: r.matchedPlayerId },
+      ]);
       setFlashResult({ correct: true, text: `✓ "${r.matchedAnswer}" — matched!` });
     } else {
+      setGuessHistory((prev) => [
+        ...prev,
+        { guesserId: r.guesserId, guess: r.guess, matched: false, matchedPlayerId: null },
+      ]);
       setFlashResult({ correct: false, text: `✗ "${r.guess}" — no match` });
     }
     const t = setTimeout(() => setFlashResult(null), 2500);
@@ -76,6 +88,7 @@ export function PhaseGuessing() {
             ? state.lastGuessResult.scoreDeltas
             : undefined
         }
+        guessHistory={guessHistory}
       />
 
       {/* Guesser indicator */}
