@@ -15,7 +15,7 @@ export function meta() {
 }
 
 export default function GameRoute() {
-  const { state } = useGame();
+  const { state, leaveGame } = useGame();
   const navigate = useNavigate();
 
   // SSR guard
@@ -44,6 +44,18 @@ export default function GameRoute() {
     <main className="min-h-screen bg-game-bg flex flex-col lg:flex-row">
       {/* Main game area */}
       <div className="flex-1 p-6 flex flex-col justify-center max-w-2xl mx-auto w-full">
+        {/* Leave button */}
+        {state.phase !== "game_end" && (
+          <div className="mb-4">
+            <button
+              onClick={leaveGame}
+              className="text-game-muted text-sm underline hover:text-game-text transition-colors"
+            >
+              Leave game
+            </button>
+          </div>
+        )}
+
         {/* Error banner */}
         {state.error && (
           <div className="mb-4 bg-game-accent/20 border border-game-accent text-game-text px-4 py-3 rounded-lg text-sm">

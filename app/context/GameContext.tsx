@@ -68,6 +68,7 @@ interface GameContextValue {
   state: GameState;
   createLobby: (playerName: string) => void;
   joinLobby: (code: string, playerName: string) => void;
+  leaveGame: () => void;
   startGame: () => void;
   submitAnswer: (answer: string) => void;
   submitGuess: (guess: string) => void;
@@ -298,6 +299,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [socket]
   );
 
+  const leaveGame = useCallback(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("feud_session");
+    }
+    socket.emit("leave_game");
+    setState(initialState);
+    navigate("/");
+  }, [socket, navigate]);
+
   const startGame = useCallback(() => {
     socket.emit("start_game");
   }, [socket]);
@@ -334,6 +344,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         state,
         createLobby,
         joinLobby,
+        leaveGame,
         startGame,
         submitAnswer,
         submitGuess,

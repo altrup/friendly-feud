@@ -9,7 +9,7 @@ export function meta() {
 
 export default function LobbyRoute() {
   const { code } = useParams<{ code: string }>();
-  const { state, startGame } = useGame();
+  const { state, startGame, leaveGame } = useGame();
   const navigate = useNavigate();
 
   // SSR guard: socket is browser-only
@@ -66,6 +66,14 @@ export default function LobbyRoute() {
           currentPlayerId={state.mySocketId}
         />
       </div>
+
+      {/* Leave button */}
+      <button
+        onClick={leaveGame}
+        className="text-game-muted text-sm underline hover:text-game-text transition-colors"
+      >
+        Leave game
+      </button>
 
       {/* Start button */}
       <div className="text-center">

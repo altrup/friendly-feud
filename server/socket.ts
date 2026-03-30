@@ -205,6 +205,18 @@ export function registerSocketHandlers(
       }
     });
 
+    // ─── leave_game ───────────────────────────────────────────────────────────
+    socket.on("leave_game", () => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room) return;
+      // Cancel any pending grace period and remove the session so the
+      // subsequent disconnect event doesn't start a new grace period.
+      const sessionId = room.socketToSession.get(socket.id);
+      if (sessionId) room.cancelDisconnectTimer(sessionId);
+      handlePlayerLeave(io, room, socket.id, gameManager);
+      socket.disconnect(true);
+    });
+
     // ─── disconnect ────────────────────────────────────────────────────────────
     socket.on("disconnect", () => {
       const room = gameManager.getRoomBySocketId(socket.id);
