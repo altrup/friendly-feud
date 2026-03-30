@@ -75,7 +75,7 @@ export default function LobbyRoute() {
   }
 
   const isHost = state.hostId === state.mySocketId;
-  const canStart = state.players.length >= 2;
+  const canStart = state.players.length >= 3;
 
 
   const CATEGORY_META: Record<string, { emoji: string; label: string }> = {
@@ -224,7 +224,7 @@ export default function LobbyRoute() {
             </button>
             {!canStart && (
               <p className="text-game-muted text-sm">
-                Need at least 2 players to start.
+                Need at least 3 players to start.
               </p>
             )}
           </>

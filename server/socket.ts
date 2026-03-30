@@ -92,8 +92,8 @@ export function registerSocketHandlers(
         socket.emit("error", { message: "Only the host can start the game." });
         return;
       }
-      if (room.players.size < 2) {
-        socket.emit("error", { message: "Need at least 2 players to start." });
+      if (room.players.size < 3) {
+        socket.emit("error", { message: "Need at least 3 players to start." });
         return;
       }
       if (room.phase !== "waiting") {
