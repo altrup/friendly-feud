@@ -11,7 +11,7 @@ import { PhaseRoundEnd } from "../components/PhaseRoundEnd.js";
 import { PhaseGameEnd } from "../components/PhaseGameEnd.js";
 
 export function meta() {
-  return [{ title: "Friendly Feud — Game" }];
+  return [{ title: "Friendly Feud" }];
 }
 
 export default function GameRoute() {

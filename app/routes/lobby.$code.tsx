@@ -4,7 +4,7 @@ import { useGame } from "../context/GameContext.js";
 import { PlayerList } from "../components/PlayerList.js";
 
 export function meta() {
-  return [{ title: "Friendly Feud — Lobby" }];
+  return [{ title: "Friendly Feud | Lobby" }];
 }
 
 export default function LobbyRoute() {
