@@ -43,9 +43,14 @@ export function PlayerList({
     }
   }
 
+  const sorted = [...players].sort((a, b) => {
+    if (!!a.isBot !== !!b.isBot) return a.isBot ? 1 : -1;
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <ul className="flex flex-col gap-2">
-      {players.map((player) => {
+      {sorted.map((player) => {
         const isExpanded = expandedBots.has(player.id);
         const personality =
           pendingPersonalities[player.id] ?? player.botPersonality ?? "";

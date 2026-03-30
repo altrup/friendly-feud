@@ -11,10 +11,12 @@ interface Props {
 }
 
 export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas, roundGuesses }: Props) {
-  // Sort by score descending, ties keep join order
-  const sorted = [...players].sort(
-    (a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0)
-  );
+  // Sort by score descending, alphabetical tiebreaker
+  const sorted = [...players].sort((a, b) => {
+    const scoreDiff = (scores[b.id] ?? 0) - (scores[a.id] ?? 0);
+    if (scoreDiff !== 0) return scoreDiff;
+    return a.name.localeCompare(b.name);
+  });
 
   // Build map of guesserId → their guesses for this round
   const guessesByPlayer = new Map<string, { guess: string; matched: boolean }[]>();
