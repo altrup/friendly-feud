@@ -91,7 +91,7 @@ export default function LobbyRoute() {
       </div>
 
       {/* Start controls (host only) */}
-      <div className="text-center flex flex-col items-center gap-3">
+      <div className="text-center flex flex-col items-center gap-6">
         {isHost ? (
           <>
             {/* Question set selector */}
