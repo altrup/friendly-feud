@@ -1,5 +1,5 @@
 # [Friendly Feud](https://friendlyfeud.dkg.zone/)
-A social game inspired by Family Feud! Answer a prompt, and try to guess each other's answers. Both the guesser and the answerer are rewarded points when a succesful guess is made.
+A social game inspired by Family Feud! Answer a prompt, and try to guess each other's answers. Both the guesser and the answerer are rewarded points when a successful guess is made.
 
 ## Setup
 Guide to running the game
