@@ -7,7 +7,7 @@ export function PhaseAnswering() {
   const [answer, setAnswer] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const hasSubmitted = state.answeredPlayerIds.includes(state.mySocketId ?? "");
+  const hasSubmitted = state.answeredPlayerIds.includes(state.sessionId ?? "");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

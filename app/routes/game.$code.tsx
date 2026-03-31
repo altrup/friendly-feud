@@ -24,10 +24,10 @@ export default function GameRoute() {
 
   // Redirect to home if we're not in a game
   useEffect(() => {
-    if (mounted && !state.mySocketId) {
+    if (mounted && !state.sessionId) {
       navigate("/");
     }
-  }, [mounted, state.mySocketId, navigate]);
+  }, [mounted, state.sessionId, navigate]);
 
   if (!mounted) {
     return (
@@ -51,7 +51,7 @@ export default function GameRoute() {
           <ScoreBoard
             players={state.players}
             scores={state.scores}
-            currentPlayerId={state.mySocketId}
+            currentPlayerId={state.sessionId}
           />
         </aside>
       )}

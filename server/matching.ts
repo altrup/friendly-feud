@@ -15,25 +15,25 @@ export function basicMatch(guess: string, answer: string): boolean {
 }
 
 /**
- * Groups a map of socketId→answer by their normalized form.
- * Returns Map<normalizedAnswer, socketId[]>.
+ * Groups a map of sessionId -> answer by their normalized form.
+ * Returns Map<normalizedAnswer, sessionId[]>.
  * Used by scoring to detect shared answers (multiple players gave the same answer).
  */
 export function groupAnswers(
   answers: Map<string, string>
 ): Map<string, string[]> {
   const groups = new Map<string, string[]>();
-  for (const [socketId, answer] of answers) {
+  for (const [sessionId, answer] of answers) {
     const key = normalize(answer);
     const group = groups.get(key) ?? [];
-    group.push(socketId);
+    group.push(sessionId);
     groups.set(key, group);
   }
   return groups;
 }
 
 /**
- * Matches a guess against a map of candidate answers (socketId → answer).
+ * Matches a guess against a map of candidate answers (sessionId → answer).
  * Only considers candidates whose socket IDs are NOT in the excludedIds set (already matched).
  *
  * Returns the normalized answer key that matched, or null if no match.
@@ -44,8 +44,8 @@ export function matchGuess(
   excludedIds: Set<string>
 ): string | null {
   const normalizedGuess = normalize(guess);
-  for (const [socketId, answer] of answers) {
-    if (excludedIds.has(socketId)) continue;
+  for (const [sessionId, answer] of answers) {
+    if (excludedIds.has(sessionId)) continue;
     if (normalize(answer) === normalizedGuess) {
       return normalize(answer);
     }
@@ -69,16 +69,16 @@ export async function matchGuessAsync(
 ): Promise<string[]> {
   const useAI = process.env.USE_AI_MATCHING === "true";
 
-  // Collect candidates (socketId + answer) that haven't been matched yet
-  const candidates: { socketId: string; answer: string }[] = [];
-  for (const [socketId, answer] of answers) {
-    if (!excludedIds.has(socketId)) candidates.push({ socketId, answer });
+  // Collect candidates (sessionId + answer) that haven't been matched yet
+  const candidates: { sessionId: string; answer: string }[] = [];
+  for (const [sessionId, answer] of answers) {
+    if (!excludedIds.has(sessionId)) candidates.push({ sessionId, answer });
   }
 
   if (!useAI) {
     return candidates
       .filter(({ answer }) => basicMatch(guess, answer))
-      .map(({ socketId }) => socketId);
+      .map(({ sessionId }) => sessionId);
   }
 
   // Single API call for all candidates
@@ -91,7 +91,7 @@ export async function matchGuessAsync(
     if (results !== null) {
       return candidates
         .filter((_, i) => results[i])
-        .map(({ socketId }) => socketId);
+        .map(({ sessionId }) => sessionId);
     }
   } catch (e) {
     console.log(e);
@@ -100,5 +100,5 @@ export async function matchGuessAsync(
   // Fall back to basic matching if AI call fails
   return candidates
     .filter(({ answer }) => basicMatch(guess, answer))
-    .map(({ socketId }) => socketId);
+    .map(({ sessionId }) => sessionId);
 }

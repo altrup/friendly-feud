@@ -4,7 +4,7 @@ import { ScoreBoard } from "./ScoreBoard.js";
 export function PhaseGameEnd() {
   const { state, playAgain, leaveGame } = useGame();
   const winner = state.gameEnd?.winner;
-  const isHost = state.hostId === state.mySocketId;
+  const isHost = state.hostId === state.sessionId;
 
   return (
     <div className="flex flex-col gap-8 items-center">
@@ -31,7 +31,7 @@ export function PhaseGameEnd() {
         <ScoreBoard
           players={state.players}
           scores={state.scores}
-          currentPlayerId={state.mySocketId}
+          currentPlayerId={state.sessionId}
         />
       </div>
 

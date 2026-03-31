@@ -54,10 +54,10 @@ export default function LobbyRoute() {
 
   // Redirect to home if we're not actually in a room (e.g. direct URL visit)
   useEffect(() => {
-    if (mounted && !state.mySocketId) {
+    if (mounted && !state.sessionId) {
       navigate("/");
     }
-  }, [mounted, state.mySocketId, navigate]);
+  }, [mounted, state.sessionId, navigate]);
 
   // Re-sync state when the tab becomes visible again — mobile may have missed
   // a phase_change while the page was backgrounded.
@@ -85,7 +85,7 @@ export default function LobbyRoute() {
     );
   }
 
-  const isHost = state.hostId === state.mySocketId;
+  const isHost = state.hostId === state.sessionId;
   const canStart = state.players.length >= 3;
 
 
@@ -124,7 +124,7 @@ export default function LobbyRoute() {
         </p>
         <PlayerList
           players={state.players}
-          currentPlayerId={state.mySocketId}
+          currentPlayerId={state.sessionId}
           isHost={isHost}
           onRemoveBot={isHost ? removeBot : undefined}
           onUpdateBotPersonality={isHost ? updateBotPersonality : undefined}

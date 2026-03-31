@@ -27,7 +27,7 @@ export class GameRoom {
   currentRound: number = 0;
   currentQuestion: Question | null = null;
 
-  /** socketId → submitted answer (hidden from clients during answering phase) */
+  /** sessionId → submitted answer (hidden from clients during answering phase) */
   answers: Map<string, string> = new Map();
 
   /** All guesses made during the guessing phase, in order */
@@ -74,25 +74,25 @@ export class GameRoom {
   /** Unix ms timestamp when the current guesser's turn ends; null outside guessing phase */
   guessDeadline: number | null = null;
 
-  /** sessionId → socketId (for reconnection) */
-  sessionToSocket: Map<string, string> = new Map();
-  /** socketId → sessionId (for disconnect lookup) */
-  socketToSession: Map<string, string> = new Map();
   /** Grace period timers: sessionId → timer (30s before player is removed on disconnect) */
   private disconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
-  constructor(code: string, hostSocketId: string, hostName: string) {
+  constructor(code: string, hostSessionId: string, hostName: string) {
     this.code = code;
-    this.hostId = hostSocketId;
-    this.addPlayer(hostSocketId, hostName, true);
+    this.hostId = hostSessionId;
+    this.addPlayer(hostSessionId, hostName, true);
   }
 
   // ─── Player management ──────────────────────────────────────────────────────
 
-  addPlayer(socketId: string, name: string, isHost = false): void {
-    this.players.set(socketId, { id: socketId, name, isHost });
-    this.playerOrder.push(socketId);
-    this.scores.set(socketId, 0);
+  addPlayer(sessionId: string, name: string, isHost = false): void {
+    this.players.set(sessionId, { id: sessionId, name, isHost });
+    this.playerOrder.push(sessionId);
+    this.scores.set(sessionId, 0);
+  }
+
+  hasPlayer(sessionId: string): boolean {
+    return this.players.has(sessionId);
   }
 
   addBot(botId: string, name: string, personality: string): void {
@@ -123,65 +123,11 @@ export class GameRoom {
     }
   }
 
-  removePlayer(socketId: string): void {
-    this.players.delete(socketId);
-    this.playerOrder = this.playerOrder.filter((id) => id !== socketId);
-    this.answers.delete(socketId);
-    const sessionId = this.socketToSession.get(socketId);
-    if (sessionId) {
-      this.sessionToSocket.delete(sessionId);
-      this.socketToSession.delete(socketId);
-    }
+  removePlayer(sessionId: string): void {
+    this.players.delete(sessionId);
+    this.playerOrder = this.playerOrder.filter((id) => id !== sessionId);
+    this.answers.delete(sessionId);
     // Keep score entry — score history is still meaningful
-  }
-
-  /** Register a session token for a connected player. */
-  registerSession(sessionId: string, socketId: string): void {
-    this.sessionToSocket.set(sessionId, socketId);
-    this.socketToSession.set(socketId, sessionId);
-  }
-
-  /**
-   * Remap all game state references from the old socket ID to the new one
-   * when a player reconnects with an existing session.
-   * Returns the old socket ID, or null if the session wasn't found.
-   */
-  updateSessionSocket(sessionId: string, newSocketId: string): string | null {
-    const oldSocketId = this.sessionToSocket.get(sessionId);
-    if (!oldSocketId) return null;
-
-    this.socketToSession.delete(oldSocketId);
-    this.sessionToSocket.set(sessionId, newSocketId);
-    this.socketToSession.set(newSocketId, sessionId);
-
-    const player = this.players.get(oldSocketId);
-    if (player) {
-      this.players.delete(oldSocketId);
-      this.players.set(newSocketId, { ...player, id: newSocketId });
-    }
-
-    this.playerOrder = this.playerOrder.map((id) =>
-      id === oldSocketId ? newSocketId : id
-    );
-
-    const score = this.scores.get(oldSocketId) ?? 0;
-    this.scores.delete(oldSocketId);
-    this.scores.set(newSocketId, score);
-
-    const answer = this.answers.get(oldSocketId);
-    if (answer !== undefined) {
-      this.answers.delete(oldSocketId);
-      this.answers.set(newSocketId, answer);
-    }
-
-    if (this.matchedPlayerIds.has(oldSocketId)) {
-      this.matchedPlayerIds.delete(oldSocketId);
-      this.matchedPlayerIds.add(newSocketId);
-    }
-
-    if (this.hostId === oldSocketId) this.hostId = newSocketId;
-
-    return oldSocketId;
   }
 
   startDisconnectTimer(sessionId: string, onExpire: () => void): void {
@@ -260,9 +206,9 @@ export class GameRoom {
    * Record a player's answer.
    * Returns true if ALL active players have now answered (caller should start guessing phase).
    */
-  submitAnswer(socketId: string, answer: string): boolean {
+  submitAnswer(sessionId: string, answer: string): boolean {
     if (this.phase !== "answering") return false;
-    this.answers.set(socketId, answer.trim());
+    this.answers.set(sessionId, answer.trim());
     return this.answers.size >= this.playerOrder.length + this.botIds.size;
   }
 
@@ -407,7 +353,7 @@ export class GameRoom {
       scores: Object.fromEntries(this.scores),
       currentRound: this.currentRound,
       currentQuestion: this.currentQuestion,
-      currentGuesserSocketId:
+      currentGuesserSessionId:
         this.phase === "guessing"
           ? (this.playerOrder[this.currentGuesserIndex] ?? null)
           : null,

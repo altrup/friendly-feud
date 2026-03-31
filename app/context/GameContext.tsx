@@ -25,22 +25,29 @@ import type {
 
 interface GameState {
   roomCode: string | null;
-  mySocketId: string | null;
+  sessionId: string | null;
   myName: string | null;
   phase: GamePhase;
   players: Player[];
   scores: Record<string, number>;
   currentQuestion: Question | null;
-  currentGuesserSocketId: string | null;
+  currentGuesserSessionId: string | null;
   answeredPlayerIds: string[];
   matchedPlayerIds: string[];
   lastGuessResult: GuessResultPayload | null;
   /** Answer text for matched players accumulated during guessing; persisted server-side */
   revealedAnswers: Record<string, string>;
-  /** Revealed at round_end: socketId → answer text (full set) */
+  /** Revealed at round_end: sessionId → answer text (full set) */
   roundAnswers: Record<string, string> | null;
   /** Guesses made so far this round; populated during guessing and at round_end */
-  roundGuesses: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[] | null;
+  roundGuesses:
+    | {
+        guesserId: string;
+        guess: string;
+        matched: boolean;
+        matchedPlayerIds: string[];
+      }[]
+    | null;
   /** Revealed at round_end: score change per player for this round */
   roundScoreDeltas: Record<string, number> | null;
   roundNumber: number;
@@ -53,13 +60,13 @@ interface GameState {
 
 const initialState: GameState = {
   roomCode: null,
-  mySocketId: null,
+  sessionId: null,
   myName: null,
   phase: "waiting",
   players: [],
   scores: {},
   currentQuestion: null,
-  currentGuesserSocketId: null,
+  currentGuesserSessionId: null,
   answeredPlayerIds: [],
   matchedPlayerIds: [],
   lastGuessResult: null,
@@ -118,7 +125,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       players: roomState.players,
       scores: roomState.scores,
       currentQuestion: roomState.currentQuestion,
-      currentGuesserSocketId: roomState.currentGuesserSocketId,
+      currentGuesserSessionId: roomState.currentGuesserSessionId,
       answeredPlayerIds: roomState.answeredPlayerIds,
       matchedPlayerIds: roomState.matchedPlayerIds,
       hostId: roomState.hostId,
@@ -128,7 +135,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       roundNumber: roomState.currentRound,
       // Restore server-persisted revealed answers and guess history (non-null during guessing)
       revealedAnswers: roomState.revealedAnswers,
-      roundGuesses: roomState.guessHistory.length > 0 ? roomState.guessHistory : prev.roundGuesses,
+      roundGuesses:
+        roomState.guessHistory.length > 0
+          ? roomState.guessHistory
+          : prev.roundGuesses,
       // Clear round-end-only data; roundAnswers is only set via the round_end event
       roundAnswers: null,
       roundScoreDeltas: null,
@@ -157,7 +167,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
 
     myNameRef.current = session.playerName;
-    setState((prev) => ({ ...prev, myName: session.playerName }));
+    setState((prev) => ({ ...prev, myName: session.playerName, sessionId: session.sessionId }));
 
     const doRejoin = () => {
       socket.emit("rejoin_session", {
@@ -172,15 +182,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       socket.once("connect", doRejoin);
       socket.connect();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally run once on mount only
 
   useEffect(() => {
-    // Store socket ID once connected
-    socket.on("connect", () => {
-      setState((prev) => ({ ...prev, mySocketId: socket.id ?? null }));
-    });
-
     // ── session_created: save session token to sessionStorage ──
     // roomCode isn't known yet (lobby_update hasn't arrived), so we store a
     // partial entry; lobby_update will fill in the roomCode below.
@@ -192,15 +197,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
             sessionId,
             roomCode: null,
             playerName: myNameRef.current,
-          })
+          }),
         );
       }
+
+      setState((prev) => ({ ...prev, sessionId }));
     });
 
     // ── session_restored: reconnected to an existing game session ──
     socket.on("session_restored", (roomState) => {
       applyRoomState(roomState);
-      setState((prev) => ({ ...prev, mySocketId: socket.id ?? null }));
       if (roomState.phase === "waiting") {
         navigate(`/lobby/${roomState.code}`);
       } else {
@@ -208,20 +214,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // ── kicked: host removed this player from the room ──
-    socket.on("kicked", () => {
-      if (typeof window !== "undefined") {
-        sessionStorage.removeItem("feud_session");
-      }
-      setState(initialState);
-      navigate("/");
-    });
-
     // ── session_expired: grace period elapsed, session no longer valid ──
     socket.on("session_expired", () => {
       if (typeof window !== "undefined") {
         sessionStorage.removeItem("feud_session");
+        setState((prev) => ({ ...prev, sessionId: null }));
       }
+    });
+
+    // ── kicked: host removed this player from the room ──
+    socket.on("kicked", () => {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("feud_session");
+        setState((prev) => ({ ...prev, sessionId: null }));
+      }
+      setState(initialState);
+      navigate("/");
     });
 
     // ── lobby_update: received when player list changes ──
@@ -236,10 +244,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
             if (!entry.roomCode) {
               sessionStorage.setItem(
                 "feud_session",
-                JSON.stringify({ ...entry, roomCode: roomState.code })
+                JSON.stringify({ ...entry, roomCode: roomState.code }),
               );
             }
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
       }
       // Navigate to lobby if we just joined/created
@@ -262,9 +272,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
         ...prev,
         lastGuessResult: data,
         // Merge in all matched player IDs and their answer text immediately
-        matchedPlayerIds: data.matched && data.matchedPlayerIds.length
-          ? [...prev.matchedPlayerIds, ...data.matchedPlayerIds]
-          : prev.matchedPlayerIds,
+        matchedPlayerIds:
+          data.matched && data.matchedPlayerIds.length
+            ? [...prev.matchedPlayerIds, ...data.matchedPlayerIds]
+            : prev.matchedPlayerIds,
         revealedAnswers: data.matched
           ? { ...prev.revealedAnswers, ...data.matchedAnswers }
           : prev.revealedAnswers,
@@ -282,17 +293,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
 
     // ── round_end: all answers revealed ──
-    socket.on("round_end", ({ state: roomState, revealedAnswers, guessHistory, roundScoreDeltas }) => {
-      applyRoomState(roomState);
-      setState((prev) => ({
-        ...prev,
-        phase: "round_end",
-        roundAnswers: revealedAnswers,
-        roundGuesses: guessHistory,
+    socket.on(
+      "round_end",
+      ({
+        state: roomState,
+        revealedAnswers,
+        guessHistory,
         roundScoreDeltas,
-        scores: roomState.scores,
-      }));
-    });
+      }) => {
+        applyRoomState(roomState);
+        setState((prev) => ({
+          ...prev,
+          phase: "round_end",
+          roundAnswers: revealedAnswers,
+          roundGuesses: guessHistory,
+          roundScoreDeltas,
+          scores: roomState.scores,
+        }));
+      },
+    );
 
     // ── game_end: final results ──
     socket.on("game_end", (data) => {
@@ -304,6 +323,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         phase: "game_end",
         scores: data.scores,
         gameEnd: data,
+        sessionId: null
       }));
     });
 
@@ -336,7 +356,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!socket.connected) socket.connect();
       socket.emit("create_lobby", { playerName });
     },
-    [socket]
+    [socket],
   );
 
   const joinLobby = useCallback(
@@ -346,7 +366,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!socket.connected) socket.connect();
       socket.emit("join_lobby", { code, playerName });
     },
-    [socket]
+    [socket],
   );
 
   const leaveGame = useCallback(() => {
@@ -362,21 +382,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (questionSet: string, customTheme?: string) => {
       socket.emit("start_game", { questionSet, customTheme });
     },
-    [socket]
+    [socket],
   );
 
   const submitAnswer = useCallback(
     (answer: string) => {
       socket.emit("submit_answer", { answer });
     },
-    [socket]
+    [socket],
   );
 
   const submitGuess = useCallback(
     (guess: string) => {
       socket.emit("submit_guess", { guess });
     },
-    [socket]
+    [socket],
   );
 
   const nextRound = useCallback(() => {
@@ -399,28 +419,28 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (botId: string) => {
       socket.emit("remove_bot", { botId });
     },
-    [socket]
+    [socket],
   );
 
   const updateBotPersonality = useCallback(
     (botId: string, personality: string) => {
       socket.emit("update_bot_personality", { botId, personality });
     },
-    [socket]
+    [socket],
   );
 
   const renameBot = useCallback(
     (botId: string, name: string) => {
       socket.emit("rename_bot", { botId, name });
     },
-    [socket]
+    [socket],
   );
 
   const kickPlayer = useCallback(
     (playerId: string) => {
       socket.emit("kick_player", { playerId });
     },
-    [socket]
+    [socket],
   );
 
   const requestSync = useCallback(() => {

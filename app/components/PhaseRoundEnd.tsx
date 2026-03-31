@@ -5,9 +5,10 @@ import { ScoreBoard } from "./ScoreBoard.js";
 
 export function PhaseRoundEnd() {
   const { state, nextRound } = useGame();
-  const isHost = state.hostId === state.mySocketId;
+  const isHost = state.hostId === state.sessionId;
   const isLastRound = state.roundNumber >= 3;
   const [isAdvancing, setIsAdvancing] = useState(false);
+  console.log(state);
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,7 +35,7 @@ export function PhaseRoundEnd() {
       <ScoreBoard
         players={state.players}
         scores={state.scores}
-        currentPlayerId={state.mySocketId}
+        currentPlayerId={state.sessionId}
         roundScoreDeltas={state.roundScoreDeltas}
         roundGuesses={state.roundGuesses}
       />

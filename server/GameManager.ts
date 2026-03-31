@@ -37,9 +37,9 @@ export class GameManager {
 
   // ─── Room management ────────────────────────────────────────────────────────
 
-  createRoom(hostSocketId: string, hostName: string): GameRoom {
+  createRoom(hostSessionId: string, hostName: string): GameRoom {
     const code = this.generateCode();
-    const room = new GameRoom(code, hostSocketId, hostName);
+    const room = new GameRoom(code, hostSessionId, hostName);
     this.rooms.set(code, room);
     return room;
   }
@@ -49,9 +49,9 @@ export class GameManager {
   }
 
   /** Find the room a socket belongs to (for disconnect handling). */
-  getRoomBySocketId(socketId: string): GameRoom | undefined {
+  getRoomBySessionId(sessionId: string): GameRoom | undefined {
     for (const room of this.rooms.values()) {
-      if (room.players.has(socketId)) return room;
+      if (room.players.has(sessionId)) return room;
     }
     return undefined;
   }

@@ -13,9 +13,9 @@ export function PhaseGuessing() {
     text: string;
   } | null>(null);
 
-  const isMyTurn = state.currentGuesserSocketId === state.mySocketId;
+  const isMyTurn = state.currentGuesserSessionId === state.sessionId;
   const currentGuesser = state.players.find(
-    (p) => p.id === state.currentGuesserSocketId
+    (p) => p.id === state.currentGuesserSessionId
   );
 
   // Show a brief flash when a guess result comes in (UI-only, no persistence needed)

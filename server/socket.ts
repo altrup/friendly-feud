@@ -1,7 +1,7 @@
 // Socket.io event handlers — all game events are registered here.
 // Called once from server/app.ts with the Socket.io server and GameManager instances.
 
-import { randomUUID } from "crypto";
+import { randomUUID, type UUID } from "crypto";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
@@ -24,6 +24,7 @@ export function registerSocketHandlers(
   gameManager: GameManager,
 ): void {
   io.on("connection", (socket: TypedSocket) => {
+    let sessionId: UUID;
     // ─── create_lobby ──────────────────────────────────────────────────────────
     socket.on("create_lobby", ({ playerName }) => {
       if (!playerName?.trim()) {
@@ -31,10 +32,9 @@ export function registerSocketHandlers(
         return;
       }
 
-      const room = gameManager.createRoom(socket.id, playerName.trim());
+      sessionId = randomUUID();
+      const room = gameManager.createRoom(sessionId, playerName.trim());
       socket.join(room.code);
-      const sessionId = randomUUID();
-      room.registerSession(sessionId, socket.id);
       socket.emit("session_created", { sessionId });
       socket.emit("lobby_update", room.toClientState());
     });
@@ -61,34 +61,34 @@ export function registerSocketHandlers(
         return;
       }
 
-      room.addPlayer(socket.id, playerName.trim());
+      sessionId = randomUUID();
+      room.addPlayer(sessionId, playerName.trim());
       socket.join(room.code);
-      const sessionId = randomUUID();
-      room.registerSession(sessionId, socket.id);
       socket.emit("session_created", { sessionId });
       // Broadcast updated player list to everyone in the room
       io.to(room.code).emit("lobby_update", room.toClientState());
     });
 
     // ─── rejoin_session ────────────────────────────────────────────────────────
-    socket.on("rejoin_session", ({ sessionId, roomCode }) => {
+    socket.on("rejoin_session", ({ sessionId: oldSessionId, roomCode }) => {
       const room = gameManager.getRoom(roomCode);
-      if (!room || !room.sessionToSocket.has(sessionId)) {
+      console.log(room?.players, oldSessionId);
+      if (!room || !room.hasPlayer(oldSessionId)) {
         socket.emit("session_expired");
         return;
       }
 
-      room.cancelDisconnectTimer(sessionId);
-      room.updateSessionSocket(sessionId, socket.id);
+      sessionId = oldSessionId as UUID;
+      room.cancelDisconnectTimer(oldSessionId);
       socket.join(room.code);
       socket.emit("session_restored", room.toClientState());
     });
 
     // ─── start_game ────────────────────────────────────────────────────────────
     socket.on("start_game", async ({ questionSet, customTheme }) => {
-      const room = gameManager.getRoomBySocketId(socket.id);
+      const room = gameManager.getRoomBySessionId(sessionId);
       if (!room) return;
-      if (room.hostId !== socket.id) {
+      if (room.hostId !== sessionId) {
         socket.emit("error", { message: "Only the host can start the game." });
         return;
       }
@@ -128,16 +128,16 @@ export function registerSocketHandlers(
 
     // ─── submit_answer ─────────────────────────────────────────────────────────
     socket.on("submit_answer", ({ answer }) => {
-      const room = gameManager.getRoomBySocketId(socket.id);
+      const room = gameManager.getRoomBySessionId(sessionId);
       if (!room || room.phase !== "answering") return;
       if (!answer?.trim()) {
         socket.emit("error", { message: "Answer cannot be empty." });
         return;
       }
       // Prevent re-submission
-      if (room.answers.has(socket.id)) return;
+      if (room.answers.has(sessionId)) return;
 
-      const allAnswered = room.submitAnswer(socket.id, answer);
+      const allAnswered = room.submitAnswer(sessionId, answer);
 
       if (allAnswered) {
         startGuessingPhase(io, room, gameManager);
@@ -149,9 +149,9 @@ export function registerSocketHandlers(
 
     // ─── submit_guess ──────────────────────────────────────────────────────────
     socket.on("submit_guess", async ({ guess }) => {
-      const room = gameManager.getRoomBySocketId(socket.id);
+      const room = gameManager.getRoomBySessionId(sessionId);
       if (!room || room.phase !== "guessing") return;
-      if (room.getCurrentGuesser() !== socket.id) {
+      if (room.getCurrentGuesser() !== sessionId) {
         socket.emit("error", { message: "It is not your turn to guess." });
         return;
       }
@@ -160,11 +160,11 @@ export function registerSocketHandlers(
         return;
       }
 
-      const result = await room.processGuess(socket.id, guess.trim());
+      const result = await room.processGuess(sessionId, guess.trim());
 
       // Emit guess result to all players
       io.to(room.code).emit("guess_result", {
-        guesserId: socket.id,
+        guesserId: sessionId,
         guess: guess.trim(),
         matched: result.matched,
         matchedPlayerId: result.matchedPlayerId,
@@ -187,8 +187,8 @@ export function registerSocketHandlers(
 
     // ─── next_round ────────────────────────────────────────────────────────────
     socket.on("next_round", async () => {
-      const room = gameManager.getRoomBySocketId(socket.id);
-      if (!room || room.hostId !== socket.id) return;
+      const room = gameManager.getRoomBySessionId(sessionId);
+      if (!room || room.hostId !== sessionId) return;
       if (room.phase !== "round_end") return;
 
       const outcome = room.advanceRound();
@@ -224,16 +224,16 @@ export function registerSocketHandlers(
 
     // ─── play_again ───────────────────────────────────────────────────────────
     socket.on("play_again", () => {
-      const room = gameManager.getRoomBySocketId(socket.id);
-      if (!room || room.hostId !== socket.id || room.phase !== "game_end") return;
+      const room = gameManager.getRoomBySessionId(sessionId);
+      if (!room || room.hostId !== sessionId || room.phase !== "game_end") return;
       room.resetToLobby();
       io.to(room.code).emit("lobby_update", room.toClientState());
     });
 
     // ─── add_bot ──────────────────────────────────────────────────────────────
     socket.on("add_bot", () => {
-      const room = gameManager.getRoomBySocketId(socket.id);
-      if (!room || room.hostId !== socket.id || room.phase !== "waiting") return;
+      const room = gameManager.getRoomBySessionId(sessionId);
+      if (!room || room.hostId !== sessionId || room.phase !== "waiting") return;
       // Cycle through defaults based on how many bots already exist
       const { name, personality } = DEFAULT_BOTS[room.botIds.size % DEFAULT_BOTS.length];
       const botId = `bot-${randomUUID()}`;
@@ -243,24 +243,24 @@ export function registerSocketHandlers(
 
     // ─── remove_bot ───────────────────────────────────────────────────────────
     socket.on("remove_bot", ({ botId }) => {
-      const room = gameManager.getRoomBySocketId(socket.id);
-      if (!room || room.hostId !== socket.id || room.phase !== "waiting") return;
+      const room = gameManager.getRoomBySessionId(sessionId);
+      if (!room || room.hostId !== sessionId || room.phase !== "waiting") return;
       room.removeBot(botId);
       io.to(room.code).emit("lobby_update", room.toClientState());
     });
 
     // ─── update_bot_personality ───────────────────────────────────────────────
     socket.on("update_bot_personality", ({ botId, personality }) => {
-      const room = gameManager.getRoomBySocketId(socket.id);
-      if (!room || room.hostId !== socket.id || room.phase !== "waiting") return;
+      const room = gameManager.getRoomBySessionId(sessionId);
+      if (!room || room.hostId !== sessionId || room.phase !== "waiting") return;
       room.updateBotPersonality(botId, personality);
       io.to(room.code).emit("lobby_update", room.toClientState());
     });
 
     // ─── rename_bot ───────────────────────────────────────────────────────────
     socket.on("rename_bot", ({ botId, name }) => {
-      const room = gameManager.getRoomBySocketId(socket.id);
-      if (!room || room.hostId !== socket.id || room.phase !== "waiting") return;
+      const room = gameManager.getRoomBySessionId(sessionId);
+      if (!room || room.hostId !== sessionId || room.phase !== "waiting") return;
       if (!name?.trim()) return;
       room.renameBot(botId, name);
       io.to(room.code).emit("lobby_update", room.toClientState());
@@ -268,9 +268,9 @@ export function registerSocketHandlers(
 
     // ─── kick_player ──────────────────────────────────────────────────────────
     socket.on("kick_player", ({ playerId }) => {
-      const room = gameManager.getRoomBySocketId(socket.id);
-      if (!room || room.hostId !== socket.id || room.phase !== "waiting") return;
-      if (playerId === socket.id) return; // host cannot kick themselves
+      const room = gameManager.getRoomBySessionId(sessionId);
+      if (!room || room.hostId !== sessionId || room.phase !== "waiting") return;
+      if (playerId === sessionId) return; // host cannot kick themselves
       handlePlayerLeave(io, room, playerId, gameManager);
       // Notify the kicked player so they can redirect to home
       io.to(playerId).emit("kicked");
@@ -279,7 +279,7 @@ export function registerSocketHandlers(
     // ─── request_sync ─────────────────────────────────────────────────────────
     // Client missed a phase_change while backgrounded — re-emit current state.
     socket.on("request_sync", () => {
-      const room = gameManager.getRoomBySocketId(socket.id);
+      const room = gameManager.getRoomBySessionId(sessionId);
       if (!room) return;
       if (room.phase === "waiting") {
         socket.emit("lobby_update", room.toClientState());
@@ -290,29 +290,27 @@ export function registerSocketHandlers(
 
     // ─── leave_game ───────────────────────────────────────────────────────────
     socket.on("leave_game", () => {
-      const room = gameManager.getRoomBySocketId(socket.id);
+      const room = gameManager.getRoomBySessionId(sessionId);
       if (!room) return;
       // Cancel any pending grace period and remove the session so the
       // subsequent disconnect event doesn't start a new grace period.
-      const sessionId = room.socketToSession.get(socket.id);
       if (sessionId) room.cancelDisconnectTimer(sessionId);
-      handlePlayerLeave(io, room, socket.id, gameManager);
+      handlePlayerLeave(io, room, sessionId, gameManager);
       socket.disconnect(true);
     });
 
     // ─── disconnect ────────────────────────────────────────────────────────────
     socket.on("disconnect", () => {
-      const room = gameManager.getRoomBySocketId(socket.id);
+      const room = gameManager.getRoomBySessionId(sessionId);
       if (!room) return;
 
-      const sessionId = room.socketToSession.get(socket.id);
       if (sessionId) {
         // Give the player 30s to reconnect before removing them
         room.startDisconnectTimer(sessionId, () => {
-          handlePlayerLeave(io, room, socket.id, gameManager);
+          handlePlayerLeave(io, room, sessionId, gameManager);
         });
       } else {
-        handlePlayerLeave(io, room, socket.id, gameManager);
+        handlePlayerLeave(io, room, sessionId, gameManager);
       }
     });
   });
@@ -426,10 +424,10 @@ function emitGameEnd(io: TypedServer, room: GameRoom): void {
 function handlePlayerLeave(
   io: TypedServer,
   room: GameRoom,
-  socketId: string,
+  sessionId: string,
   gameManager: GameManager
 ): void {
-  room.removePlayer(socketId);
+  room.removePlayer(sessionId);
 
   if (room.players.size === 0) {
     gameManager.deleteRoom(room.code);
@@ -437,7 +435,7 @@ function handlePlayerLeave(
   }
 
   // If the host left, promote the next player
-  if (room.hostId === socketId) {
+  if (room.hostId === sessionId) {
     const newHostId = room.playerOrder[0];
     room.hostId = newHostId;
     const newHost = room.players.get(newHostId);

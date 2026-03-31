@@ -15,7 +15,7 @@ import { groupAnswers } from "./matching.js";
  * @param guess       The guessed string (already confirmed to match)
  * @param guesserId   Socket ID of the player who guessed
  * @param matchedIds  Socket IDs of all players whose answer was matched (1+ for shared answers)
- * @returns Map of socketId → points earned this guess
+ * @returns Map of sessionId → points earned this guess
  */
 export function computeScoreDeltas(
   guesserId: string,

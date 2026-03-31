@@ -33,7 +33,7 @@ export interface ClientGameState {
   scores: Record<string, number>;
   currentRound: number;
   currentQuestion: Question | null;
-  currentGuesserSocketId: string | null;
+  currentGuesserSessionId: string | null;
   /** Socket IDs of players who have submitted their answer (not the answers themselves) */
   answeredPlayerIds: string[];
   /** Which answers have already been matched (socket IDs of matched players) */
@@ -67,7 +67,7 @@ export interface GuessResultPayload {
 
 export interface RoundEndPayload {
   state: ClientGameState;
-  revealedAnswers: Record<string, string>; // socketId → answer text
+  revealedAnswers: Record<string, string>; // sessionId → answer text
   guessHistory: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[];
   roundScoreDeltas: Record<string, number>;
 }
