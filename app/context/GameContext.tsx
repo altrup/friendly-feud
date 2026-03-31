@@ -314,15 +314,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     // ── game_end: final results ──
     socket.on("game_end", (data) => {
-      if (typeof window !== "undefined") {
-        sessionStorage.removeItem("feud_session");
-      }
       setState((prev) => ({
         ...prev,
         phase: "game_end",
         scores: data.scores,
         gameEnd: data,
-        sessionId: null,
       }));
     });
 
