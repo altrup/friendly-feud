@@ -82,7 +82,7 @@ export default function GameRoute() {
       {state.phase !== "game_end" && (
         <button
           onClick={leaveGame}
-          className="fixed bottom-4 left-4 text-game-muted text-sm underline hover:text-game-text transition-colors"
+          className="fixed bottom-4 left-4 z-50 text-game-muted text-sm underline hover:text-game-text transition-colors"
         >
           Leave game
         </button>

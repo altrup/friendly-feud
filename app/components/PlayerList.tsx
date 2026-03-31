@@ -244,19 +244,33 @@ export function PlayerList({
 }
 
 function PersonalityTooltip({ personality }: { personality: string }) {
+  const [open, setOpen] = useState(false);
+
   return (
     <span className="relative group inline-flex items-center">
+      {/* Invisible full-screen overlay to close the tooltip on outside click */}
+      {open && (
+        <span
+          className="fixed inset-0 z-10"
+          onClick={() => setOpen(false)}
+        />
+      )}
       <svg
-        className="w-3.5 h-3.5 text-game-muted cursor-default"
+        className="w-3.5 h-3.5 text-game-muted cursor-pointer relative z-20"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
         strokeWidth={2}
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
       >
         <circle cx="12" cy="12" r="10" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-4m0-4h.01" />
       </svg>
-      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 bg-game-surface border border-game-border text-game-text text-xs rounded-lg px-3 py-2 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+      <span
+        className={`absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 bg-game-surface border border-game-border text-game-text text-xs rounded-lg px-3 py-2 shadow-lg transition-opacity z-20 pointer-events-none ${
+          open ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        }`}
+      >
         {personality}
       </span>
     </span>

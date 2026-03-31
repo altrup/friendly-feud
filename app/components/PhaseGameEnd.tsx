@@ -49,7 +49,7 @@ export function PhaseGameEnd() {
       )}
       <button
         onClick={leaveGame}
-        className="text-game-muted text-sm underline hover:text-game-text transition-colors"
+        className="z-50 text-game-muted text-sm underline hover:text-game-text transition-colors"
       >
         Leave game
       </button>
