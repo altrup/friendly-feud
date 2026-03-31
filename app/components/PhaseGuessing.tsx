@@ -76,11 +76,6 @@ export function PhaseGuessing() {
         players={state.players}
         matchedPlayerIds={state.matchedPlayerIds}
         revealedAnswers={state.revealedAnswers}
-        lastScoreDeltas={
-          state.lastGuessResult?.matched
-            ? state.lastGuessResult.scoreDeltas
-            : undefined
-        }
         guessHistory={state.roundGuesses}
       />
 

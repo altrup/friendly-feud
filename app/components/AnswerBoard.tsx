@@ -7,8 +7,6 @@ interface Props {
   players: Player[];
   matchedPlayerIds: string[];
   revealedAnswers?: Record<string, string> | null;
-  /** scoreDeltas from the last guess result, used to briefly highlight new reveals */
-  lastScoreDeltas?: Record<string, number>;
   /** guessHistory from round_end, used to show who guessed each answer */
   guessHistory?: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[] | null;
 }
@@ -17,7 +15,6 @@ export function AnswerBoard({
   players,
   matchedPlayerIds,
   revealedAnswers,
-  lastScoreDeltas,
   guessHistory,
 }: Props) {
   // Build a map from answerer's socket ID to the guesser who matched it
@@ -41,7 +38,6 @@ export function AnswerBoard({
         const hasRevealedAnswer = revealedAnswers != null && player.id in revealedAnswers;
         const isRevealed = wasGuessed || hasRevealedAnswer;
         const answer = revealedAnswers?.[player.id] ?? null;
-        const delta = lastScoreDeltas?.[player.id];
         const guesserId = guesserForAnswer.get(player.id);
         const guesserName = guesserId
           ? players.find((p) => p.id === guesserId)?.name
@@ -60,12 +56,6 @@ export function AnswerBoard({
           >
             <div className="flex items-center justify-between">
               <span className="text-game-muted text-xs">{player.name}</span>
-              {/* Score pop-up on reveal */}
-              {delta !== undefined && (
-                <span className="text-game-gold text-xs font-bold animate-bounce">
-                  +{delta}
-                </span>
-              )}
             </div>
             <div
               className={`mt-1 text-lg font-bold ${
