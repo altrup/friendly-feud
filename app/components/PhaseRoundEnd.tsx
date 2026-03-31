@@ -8,7 +8,6 @@ export function PhaseRoundEnd() {
   const isHost = state.hostId === state.sessionId;
   const isLastRound = state.roundNumber >= 3;
   const [isAdvancing, setIsAdvancing] = useState(false);
-  console.log(state);
 
   return (
     <div className="flex flex-col gap-6">
@@ -27,7 +26,7 @@ export function PhaseRoundEnd() {
       <AnswerBoard
         players={state.players}
         matchedPlayerIds={state.matchedPlayerIds}
-        revealedAnswers={state.roundAnswers}
+        revealedAnswers={state.revealedAnswers}
         guessHistory={state.roundGuesses}
       />
 

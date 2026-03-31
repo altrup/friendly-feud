@@ -37,8 +37,6 @@ interface GameState {
   lastGuessResult: GuessResultPayload | null;
   /** Answer text for matched players accumulated during guessing; persisted server-side */
   revealedAnswers: Record<string, string>;
-  /** Revealed at round_end: sessionId → answer text (full set) */
-  roundAnswers: Record<string, string> | null;
   /** Guesses made so far this round; populated during guessing and at round_end */
   roundGuesses:
     | {
@@ -71,7 +69,6 @@ const initialState: GameState = {
   matchedPlayerIds: [],
   lastGuessResult: null,
   revealedAnswers: {},
-  roundAnswers: null,
   roundGuesses: null,
   roundScoreDeltas: null,
   roundNumber: 0,
@@ -139,8 +136,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
         roomState.guessHistory.length > 0
           ? roomState.guessHistory
           : prev.roundGuesses,
-      // Clear round-end-only data; roundAnswers is only set via the round_end event
-      roundAnswers: null,
       roundScoreDeltas: null,
       lastGuessResult: null,
       error: null,
@@ -305,7 +300,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setState((prev) => ({
           ...prev,
           phase: "round_end",
-          roundAnswers: revealedAnswers,
+          revealedAnswers,
           roundGuesses: guessHistory,
           roundScoreDeltas,
           scores: roomState.scores,

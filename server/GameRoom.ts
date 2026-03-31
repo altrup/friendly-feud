@@ -31,7 +31,12 @@ export class GameRoom {
   answers: Map<string, string> = new Map();
 
   /** All guesses made during the guessing phase, in order */
-  guessHistory: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[] = [];
+  guessHistory: {
+    guesserId: string;
+    guess: string;
+    matched: boolean;
+    matchedPlayerIds: string[];
+  }[] = [];
 
   /** Accumulated score deltas for the current round */
   roundScoreDeltas: Map<string, number> = new Map();
@@ -75,7 +80,8 @@ export class GameRoom {
   guessDeadline: number | null = null;
 
   /** Grace period timers: sessionId → timer (30s before player is removed on disconnect) */
-  private disconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private disconnectTimers: Map<string, ReturnType<typeof setTimeout>> =
+    new Map();
 
   constructor(code: string, hostSessionId: string, hostName: string) {
     this.code = code;
@@ -96,7 +102,13 @@ export class GameRoom {
   }
 
   addBot(botId: string, name: string, personality: string): void {
-    this.players.set(botId, { id: botId, name, isHost: false, isBot: true, botPersonality: personality });
+    this.players.set(botId, {
+      id: botId,
+      name,
+      isHost: false,
+      isBot: true,
+      botPersonality: personality,
+    });
     // Bots are NOT added to playerOrder — they answer but don't guess
     this.botIds.add(botId);
     this.scores.set(botId, 0);
@@ -266,10 +278,20 @@ export class GameRoom {
     excludedIds.add(guesserId);
 
     // Returns all socket IDs whose answer matches the guess (guesser already excluded)
-    const matchedIds = await matchGuessAsync(this.currentQuestion?.prompt ?? "", guess, this.answers, excludedIds);
+    const matchedIds = await matchGuessAsync(
+      this.currentQuestion?.prompt ?? "",
+      guess,
+      this.answers,
+      excludedIds,
+    );
 
     if (matchedIds.length === 0) {
-      this.guessHistory.push({ guesserId, guess, matched: false, matchedPlayerIds: [] });
+      this.guessHistory.push({
+        guesserId,
+        guess,
+        matched: false,
+        matchedPlayerIds: [],
+      });
       return {
         matched: false,
         matchedPlayerId: null,
@@ -289,13 +311,21 @@ export class GameRoom {
     const scoreDeltas = computeScoreDeltas(guesserId, matchedIds);
     for (const [id, delta] of scoreDeltas) {
       this.scores.set(id, (this.scores.get(id) ?? 0) + delta);
-      this.roundScoreDeltas.set(id, (this.roundScoreDeltas.get(id) ?? 0) + delta);
+      this.roundScoreDeltas.set(
+        id,
+        (this.roundScoreDeltas.get(id) ?? 0) + delta,
+      );
     }
 
     const matchedPlayerId = matchedIds[0];
     const matchedAnswer = this.answers.get(matchedPlayerId)!;
     // One entry per guess, carrying all matched player IDs
-    this.guessHistory.push({ guesserId, guess, matched: true, matchedPlayerIds: matchedIds });
+    this.guessHistory.push({
+      guesserId,
+      guess,
+      matched: true,
+      matchedPlayerIds: matchedIds,
+    });
     return {
       matched: true,
       matchedPlayerId,
@@ -364,22 +394,30 @@ export class GameRoom {
       questionSet: this.questionSet,
       // Include revealed answers for matched players — safe to send since answers
       // are only added to matchedPlayerIds after a successful guess, not during answering.
-      revealedAnswers: Object.fromEntries(
-        [...this.matchedPlayerIds]
-          .filter(id => this.answers.has(id))
-          .map(id => [id, this.answers.get(id)!])
-      ),
+      revealedAnswers:
+        this.phase === "round_end"
+          ? this.getAnswers()
+          : Object.fromEntries(
+              [...this.matchedPlayerIds]
+                .filter((id) => this.answers.has(id))
+                .map((id) => [id, this.answers.get(id)!]),
+            ),
       guessHistory: [...this.guessHistory],
     };
   }
 
   /** Returns the full answers map — only emitted at round_end. */
-  getRevealedAnswers(): Record<string, string> {
+  getAnswers(): Record<string, string> {
     return Object.fromEntries(this.answers);
   }
 
   /** Returns all guesses made during the round — only emitted at round_end. */
-  getGuessHistory(): { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[] {
+  getGuessHistory(): {
+    guesserId: string;
+    guess: string;
+    matched: boolean;
+    matchedPlayerIds: string[];
+  }[] {
     return [...this.guessHistory];
   }
 

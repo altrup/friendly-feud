@@ -389,7 +389,7 @@ function endRound(io: TypedServer, room: GameRoom): void {
   room.phase = "round_end";
   io.to(room.code).emit("round_end", {
     state: room.toClientState(),
-    revealedAnswers: room.getRevealedAnswers(),
+    revealedAnswers: room.getAnswers(),
     guessHistory: room.getGuessHistory(),
     roundScoreDeltas: room.getRoundScoreDeltas(),
   });
