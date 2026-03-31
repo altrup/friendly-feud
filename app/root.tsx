@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -39,7 +40,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* Must be first — sets data-theme before stylesheets are parsed */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
         <Meta />
         <Links />
       </head>
@@ -54,6 +55,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // Add data-keyboard-open to <body> when an input/textarea is focused so CSS
+  // can add bottom padding, keeping content clear of the on-screen keyboard.
+  useEffect(() => {
+    const open = () => document.body.setAttribute("data-keyboard-open", "true");
+    const close = () => document.body.removeAttribute("data-keyboard-open");
+    document.addEventListener("focusin", (e) => {
+      if (e.target instanceof HTMLElement && e.target.matches("input, textarea, [contenteditable]")) {
+        open();
+      }
+    });
+    document.addEventListener("focusout", close);
+    return () => {
+      document.removeEventListener("focusin", open);
+      document.removeEventListener("focusout", close);
+    };
+  }, []);
+
   return (
     <GameProvider>
       <Outlet />

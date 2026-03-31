@@ -59,6 +59,12 @@ body {
   color-scheme: dark;
 }
 
+/* Add breathing room above the on-screen keyboard when an input is focused.
+   JS in root.tsx sets this attribute on <body> on focusin/focusout. */
+body[data-keyboard-open="true"] {
+  padding-bottom: 3rem;
+}
+
 button {
   cursor: pointer;
 }

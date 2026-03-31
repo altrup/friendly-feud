@@ -79,7 +79,7 @@ export default function LobbyRoute() {
 
   if (!mounted) {
     return (
-      <main className="min-h-screen bg-game-bg flex items-center justify-center">
+      <main className="min-h-dvh bg-game-bg flex items-center justify-center">
         <p className="text-game-muted">Loading…</p>
       </main>
     );
@@ -103,7 +103,7 @@ export default function LobbyRoute() {
   };
 
   return (
-    <main className="min-h-screen bg-game-bg flex flex-col items-center justify-center p-6 gap-8">
+    <main className="min-h-dvh bg-game-bg flex flex-col items-center justify-center p-6 gap-8">
       {/* Room code */}
       <div className="text-center">
         <p className="text-game-muted text-sm uppercase tracking-widest mb-1">

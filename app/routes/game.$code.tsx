@@ -31,7 +31,7 @@ export default function GameRoute() {
 
   if (!mounted) {
     return (
-      <main className="min-h-screen bg-game-bg flex items-center justify-center">
+      <main className="min-h-dvh bg-game-bg flex items-center justify-center">
         <p className="text-game-muted">Loading…</p>
       </main>
     );
@@ -43,7 +43,7 @@ export default function GameRoute() {
     state.players.length > 0;
 
   return (
-    <main className="min-h-screen bg-game-bg flex flex-col lg:flex-row">
+    <main className="min-h-dvh bg-game-bg flex flex-col lg:flex-row">
       {/* Score sidebar — rendered first in DOM so it appears above main content on mobile.
           On lg screens, order-2 pushes it to the right side.
           collapsible enables the toggle arrow inside the ScoreBoard header on small screens. */}

@@ -26,7 +26,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-game-bg flex flex-col items-center justify-center p-6 gap-8">
+    <main className="min-h-dvh bg-game-bg flex flex-col items-center justify-center p-6 gap-8">
       {/* Title */}
       <div className="text-center">
         <h1 className="text-5xl font-black text-game-gold tracking-tight mb-2">
