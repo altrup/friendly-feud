@@ -83,7 +83,6 @@ interface GameContextValue {
   submitAnswer: (answer: string) => void;
   submitGuess: (guess: string) => void;
   nextRound: () => void;
-  passTurn: () => void;
   clearError: () => void;
   playAgain: () => void;
   addBot: () => void;
@@ -365,10 +364,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     socket.emit("next_round");
   }, [socket]);
 
-  const passTurn = useCallback(() => {
-    socket.emit("pass_turn");
-  }, [socket]);
-
   const clearError = useCallback(() => {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
@@ -420,7 +415,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
         submitAnswer,
         submitGuess,
         nextRound,
-        passTurn,
         clearError,
         playAgain,
         addBot,

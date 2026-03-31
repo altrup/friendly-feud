@@ -4,7 +4,7 @@ import { AnswerBoard } from "./AnswerBoard.js";
 import { TimerBorder } from "./TimerBorder.js";
 
 export function PhaseGuessing() {
-  const { state, submitGuess, passTurn } = useGame();
+  const { state, submitGuess } = useGame();
   const [guess, setGuess] = useState("");
   const questionCardRef = useRef<HTMLDivElement>(null);
   // Brief highlight when a guess result comes in
@@ -137,12 +137,6 @@ export function PhaseGuessing() {
               Guess
             </button>
           </form>
-          <button
-            onClick={passTurn}
-            className="text-game-muted text-sm underline hover:text-game-text transition-colors self-start"
-          >
-            Pass turn
-          </button>
         </div>
       )}
     </div>

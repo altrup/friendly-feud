@@ -181,15 +181,6 @@ export function registerSocketHandlers(
       }
     });
 
-    // ─── pass_turn ─────────────────────────────────────────────────────────────
-    socket.on("pass_turn", () => {
-      const room = gameManager.getRoomBySocketId(socket.id);
-      if (!room || room.phase !== "guessing") return;
-      if (room.getCurrentGuesser() !== socket.id) return;
-
-      advanceTurnOrEndRound(io, room, gameManager);
-    });
-
     // ─── next_round ────────────────────────────────────────────────────────────
     socket.on("next_round", async () => {
       const room = gameManager.getRoomBySocketId(socket.id);

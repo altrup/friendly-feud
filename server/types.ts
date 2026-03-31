@@ -99,7 +99,6 @@ export interface ClientToServerEvents {
   /** targetPlayerId is optional for MVP — server matches against all unguessed answers */
   submit_guess: (data: { guess: string; targetPlayerId?: string }) => void;
   next_round: () => void;
-  pass_turn: () => void;
   play_again: () => void;
   add_bot: () => void;
   remove_bot: (data: { botId: string }) => void;
