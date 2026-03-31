@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Player } from "../../server/types.js";
+import { PersonalityTooltip } from "./PersonalityTooltip.js";
 
 interface Props {
   players: Player[];
@@ -76,21 +77,7 @@ export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas,
                 </span>
                 {/* Personality tooltip for bots */}
                 {player.isBot && player.botPersonality && (
-                  <span className="relative group inline-flex items-center shrink-0">
-                    <svg
-                      className="w-3.5 h-3.5 text-game-muted cursor-default"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-4m0-4h.01" />
-                    </svg>
-                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 bg-game-surface border border-game-border text-game-text text-xs rounded-lg px-3 py-2 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
-                      {player.botPersonality}
-                    </span>
-                  </span>
+                  <PersonalityTooltip personality={player.botPersonality} />
                 )}
                 {/* Guesses made this round */}
                 {guesses.length > 0 && (
