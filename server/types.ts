@@ -105,4 +105,6 @@ export interface ClientToServerEvents {
   update_bot_personality: (data: { botId: string; personality: string }) => void;
   rename_bot: (data: { botId: string; name: string }) => void;
   kick_player: (data: { playerId: string }) => void;
+  /** Client requests a fresh copy of the room state (e.g. after backgrounding) */
+  request_sync: () => void;
 }

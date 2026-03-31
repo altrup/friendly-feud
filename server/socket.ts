@@ -272,6 +272,18 @@ export function registerSocketHandlers(
       io.to(playerId).emit("kicked");
     });
 
+    // ─── request_sync ─────────────────────────────────────────────────────────
+    // Client missed a phase_change while backgrounded — re-emit current state.
+    socket.on("request_sync", () => {
+      const room = gameManager.getRoomBySocketId(socket.id);
+      if (!room) return;
+      if (room.phase === "waiting") {
+        socket.emit("lobby_update", room.toClientState());
+      } else {
+        socket.emit("phase_change", room.toClientState());
+      }
+    });
+
     // ─── leave_game ───────────────────────────────────────────────────────────
     socket.on("leave_game", () => {
       const room = gameManager.getRoomBySocketId(socket.id);

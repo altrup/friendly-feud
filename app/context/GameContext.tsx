@@ -90,6 +90,7 @@ interface GameContextValue {
   updateBotPersonality: (botId: string, personality: string) => void;
   renameBot: (botId: string, name: string) => void;
   kickPlayer: (playerId: string) => void;
+  requestSync: () => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -404,6 +405,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [socket]
   );
 
+  const requestSync = useCallback(() => {
+    socket.emit("request_sync");
+  }, [socket]);
+
   return (
     <GameContext.Provider
       value={{
@@ -422,6 +427,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         updateBotPersonality,
         renameBot,
         kickPlayer,
+        requestSync,
       }}
     >
       {children}

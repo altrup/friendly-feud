@@ -9,7 +9,7 @@ export function meta() {
 
 export default function LobbyRoute() {
   const { code } = useParams<{ code: string }>();
-  const { state, startGame, leaveGame, addBot, removeBot, updateBotPersonality, renameBot, kickPlayer } = useGame();
+  const { state, startGame, leaveGame, addBot, removeBot, updateBotPersonality, renameBot, kickPlayer, requestSync } = useGame();
   const navigate = useNavigate();
 
   // SSR guard: socket is browser-only
@@ -58,6 +58,17 @@ export default function LobbyRoute() {
       navigate("/");
     }
   }, [mounted, state.mySocketId, navigate]);
+
+  // Re-sync state when the tab becomes visible again — mobile may have missed
+  // a phase_change while the page was backgrounded.
+  useEffect(() => {
+    if (!mounted) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") requestSync();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [mounted, requestSync]);
 
   // Advance to game when phase leaves waiting
   useEffect(() => {
