@@ -7,7 +7,7 @@ interface Props {
   /** Score change per player for the current round */
   roundScoreDeltas?: Record<string, number> | null;
   /** All guesses from the round, used to show what each player guessed */
-  roundGuesses?: { guesserId: string; guess: string; matched: boolean }[] | null;
+  roundGuesses?: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[] | null;
 }
 
 export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas, roundGuesses }: Props) {

@@ -31,7 +31,7 @@ export class GameRoom {
   answers: Map<string, string> = new Map();
 
   /** All guesses made during the guessing phase, in order */
-  guessHistory: { guesserId: string; guess: string; matched: boolean; matchedPlayerId: string | null }[] = [];
+  guessHistory: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[] = [];
 
   /** Accumulated score deltas for the current round */
   roundScoreDeltas: Map<string, number> = new Map();
@@ -323,7 +323,7 @@ export class GameRoom {
     const matchedIds = await matchGuessAsync(this.currentQuestion?.prompt ?? "", guess, this.answers, excludedIds);
 
     if (matchedIds.length === 0) {
-      this.guessHistory.push({ guesserId, guess, matched: false, matchedPlayerId: null });
+      this.guessHistory.push({ guesserId, guess, matched: false, matchedPlayerIds: [] });
       return {
         matched: false,
         matchedPlayerId: null,
@@ -348,7 +348,8 @@ export class GameRoom {
 
     const matchedPlayerId = matchedIds[0];
     const matchedAnswer = this.answers.get(matchedPlayerId)!;
-    this.guessHistory.push({ guesserId, guess, matched: true, matchedPlayerId });
+    // One entry per guess, carrying all matched player IDs
+    this.guessHistory.push({ guesserId, guess, matched: true, matchedPlayerIds: matchedIds });
     return {
       matched: true,
       matchedPlayerId,
@@ -424,7 +425,7 @@ export class GameRoom {
   }
 
   /** Returns all guesses made during the round — only emitted at round_end. */
-  getGuessHistory(): { guesserId: string; guess: string; matched: boolean; matchedPlayerId: string | null }[] {
+  getGuessHistory(): { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[] {
     return [...this.guessHistory];
   }
 

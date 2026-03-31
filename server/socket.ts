@@ -169,6 +169,10 @@ export function registerSocketHandlers(
         matched: result.matched,
         matchedPlayerId: result.matchedPlayerId,
         matchedAnswer: result.matchedAnswer,
+        matchedPlayerIds: result.matchedIds,
+        matchedAnswers: Object.fromEntries(
+          result.matchedIds.map((id) => [id, room.answers.get(id)!])
+        ),
         scoreDeltas: Object.fromEntries(result.scoreDeltas),
       });
 

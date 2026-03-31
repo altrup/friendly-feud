@@ -52,15 +52,19 @@ export interface GuessResultPayload {
   guesserId: string;
   guess: string;
   matched: boolean;
-  matchedPlayerId: string | null;
-  matchedAnswer: string | null; // revealed only on a successful match
+  matchedPlayerId: string | null; // first matched player (kept for compatibility)
+  matchedAnswer: string | null;   // first matched answer (kept for compatibility)
+  /** All players whose answer was matched by this guess (≥1 when matched) */
+  matchedPlayerIds: string[];
+  /** playerId → answer text for every matched player */
+  matchedAnswers: Record<string, string>;
   scoreDeltas: Record<string, number>;
 }
 
 export interface RoundEndPayload {
   state: ClientGameState;
   revealedAnswers: Record<string, string>; // socketId → answer text
-  guessHistory: { guesserId: string; guess: string; matched: boolean; matchedPlayerId: string | null }[];
+  guessHistory: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[];
   roundScoreDeltas: Record<string, number>;
 }
 

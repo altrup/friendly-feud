@@ -38,7 +38,7 @@ interface GameState {
   /** Revealed at round_end: socketId → answer text */
   roundAnswers: Record<string, string> | null;
   /** Revealed at round_end: all guesses made during the round */
-  roundGuesses: { guesserId: string; guess: string; matched: boolean; matchedPlayerId: string | null }[] | null;
+  roundGuesses: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[] | null;
   /** Revealed at round_end: score change per player for this round */
   roundScoreDeltas: Record<string, number> | null;
   roundNumber: number;
@@ -256,9 +256,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({
         ...prev,
         lastGuessResult: data,
-        // Merge in updated matchedPlayerIds from the guess
-        matchedPlayerIds: data.matched && data.matchedPlayerId
-          ? [...prev.matchedPlayerIds, data.matchedPlayerId]
+        // Merge in all matched player IDs from this guess
+        matchedPlayerIds: data.matched && data.matchedPlayerIds.length
+          ? [...prev.matchedPlayerIds, ...data.matchedPlayerIds]
           : prev.matchedPlayerIds,
       }));
     });

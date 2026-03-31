@@ -10,7 +10,7 @@ interface Props {
   /** scoreDeltas from the last guess result, used to briefly highlight new reveals */
   lastScoreDeltas?: Record<string, number>;
   /** guessHistory from round_end, used to show who guessed each answer */
-  guessHistory?: { guesserId: string; guess: string; matched: boolean; matchedPlayerId: string | null }[] | null;
+  guessHistory?: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[] | null;
 }
 
 export function AnswerBoard({
@@ -24,8 +24,10 @@ export function AnswerBoard({
   const guesserForAnswer = new Map<string, string>();
   if (guessHistory) {
     for (const entry of guessHistory) {
-      if (entry.matched && entry.matchedPlayerId) {
-        guesserForAnswer.set(entry.matchedPlayerId, entry.guesserId);
+      if (entry.matched) {
+        for (const id of entry.matchedPlayerIds) {
+          guesserForAnswer.set(id, entry.guesserId);
+        }
       }
     }
   }
