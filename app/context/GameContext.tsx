@@ -132,10 +132,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       roundNumber: roomState.currentRound,
       // Restore server-persisted revealed answers and guess history (non-null during guessing)
       revealedAnswers: roomState.revealedAnswers,
-      roundGuesses:
-        roomState.guessHistory.length > 0
-          ? roomState.guessHistory
-          : prev.roundGuesses,
+      roundGuesses: roomState.guessHistory,
       roundScoreDeltas: roomState.scoreDeltas,
       lastGuessResult: null,
       error: null,
