@@ -44,6 +44,10 @@ export interface ClientGameState {
   guessDeadline: number | null;
   /** The question set chosen by the host ("all" or a category name) */
   questionSet: string;
+  /** Answer text for each matched player revealed so far; empty outside guessing phase */
+  revealedAnswers: Record<string, string>;
+  /** All guesses made so far this round; empty outside guessing phase */
+  guessHistory: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[];
 }
 
 // ─── Socket Event Payload Types ───────────────────────────────────────────────

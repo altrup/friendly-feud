@@ -416,6 +416,14 @@ export class GameRoom {
       answerDeadline: this.answerDeadline,
       guessDeadline: this.guessDeadline,
       questionSet: this.questionSet,
+      // Include revealed answers for matched players — safe to send since answers
+      // are only added to matchedPlayerIds after a successful guess, not during answering.
+      revealedAnswers: Object.fromEntries(
+        [...this.matchedPlayerIds]
+          .filter(id => this.answers.has(id))
+          .map(id => [id, this.answers.get(id)!])
+      ),
+      guessHistory: [...this.guessHistory],
     };
   }
 

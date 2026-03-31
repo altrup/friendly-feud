@@ -18,30 +18,13 @@ export function PhaseGuessing() {
     (p) => p.id === state.currentGuesserSocketId
   );
 
-  // Accumulate revealed answers (guess text) as matches come in during guessing
-  const [revealedGuesses, setRevealedGuesses] = useState<Record<string, string>>({});
-  // Track who guessed each matched answer so AnswerBoard can display it
-  const [guessHistory, setGuessHistory] = useState<
-    { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[]
-  >([]);
-
-  // Show guess result flash for 2 seconds, and record matched answer text + guesser
+  // Show a brief flash when a guess result comes in (UI-only, no persistence needed)
   useEffect(() => {
     if (!state.lastGuessResult) return;
     const r = state.lastGuessResult;
     if (r.matched && r.matchedPlayerIds.length) {
-      // Reveal all matched answers and record a single history entry with all matched IDs
-      setRevealedGuesses((prev) => ({ ...prev, ...r.matchedAnswers }));
-      setGuessHistory((prev) => [
-        ...prev,
-        { guesserId: r.guesserId, guess: r.guess, matched: true, matchedPlayerIds: r.matchedPlayerIds },
-      ]);
       setFlashResult({ correct: true, text: `✓ "${r.matchedAnswer}" — matched!` });
     } else {
-      setGuessHistory((prev) => [
-        ...prev,
-        { guesserId: r.guesserId, guess: r.guess, matched: false, matchedPlayerIds: [] },
-      ]);
       setFlashResult({ correct: false, text: `✗ "${r.guess}" — no match` });
     }
     const t = setTimeout(() => setFlashResult(null), 2500);
@@ -92,13 +75,13 @@ export function PhaseGuessing() {
       <AnswerBoard
         players={state.players}
         matchedPlayerIds={state.matchedPlayerIds}
-        revealedAnswers={revealedGuesses}
+        revealedAnswers={state.revealedAnswers}
         lastScoreDeltas={
           state.lastGuessResult?.matched
             ? state.lastGuessResult.scoreDeltas
             : undefined
         }
-        guessHistory={guessHistory}
+        guessHistory={state.roundGuesses}
       />
 
       {/* Guesser indicator */}

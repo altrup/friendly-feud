@@ -35,9 +35,11 @@ interface GameState {
   answeredPlayerIds: string[];
   matchedPlayerIds: string[];
   lastGuessResult: GuessResultPayload | null;
-  /** Revealed at round_end: socketId → answer text */
+  /** Answer text for matched players accumulated during guessing; persisted server-side */
+  revealedAnswers: Record<string, string>;
+  /** Revealed at round_end: socketId → answer text (full set) */
   roundAnswers: Record<string, string> | null;
-  /** Revealed at round_end: all guesses made during the round */
+  /** Guesses made so far this round; populated during guessing and at round_end */
   roundGuesses: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[] | null;
   /** Revealed at round_end: score change per player for this round */
   roundScoreDeltas: Record<string, number> | null;
@@ -61,6 +63,7 @@ const initialState: GameState = {
   answeredPlayerIds: [],
   matchedPlayerIds: [],
   lastGuessResult: null,
+  revealedAnswers: {},
   roundAnswers: null,
   roundGuesses: null,
   roundScoreDeltas: null,
@@ -123,9 +126,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       guessDeadline: roomState.guessDeadline,
       currentRound: roomState.currentRound,
       roundNumber: roomState.currentRound,
-      // Clear previous round data on new phase
+      // Restore server-persisted revealed answers and guess history (non-null during guessing)
+      revealedAnswers: roomState.revealedAnswers,
+      roundGuesses: roomState.guessHistory.length > 0 ? roomState.guessHistory : prev.roundGuesses,
+      // Clear round-end-only data; roundAnswers is only set via the round_end event
       roundAnswers: null,
-      roundGuesses: null,
       roundScoreDeltas: null,
       lastGuessResult: null,
       error: null,
@@ -256,10 +261,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({
         ...prev,
         lastGuessResult: data,
-        // Merge in all matched player IDs from this guess
+        // Merge in all matched player IDs and their answer text immediately
         matchedPlayerIds: data.matched && data.matchedPlayerIds.length
           ? [...prev.matchedPlayerIds, ...data.matchedPlayerIds]
           : prev.matchedPlayerIds,
+        revealedAnswers: data.matched
+          ? { ...prev.revealedAnswers, ...data.matchedAnswers }
+          : prev.revealedAnswers,
+        // Append this guess to the running history
+        roundGuesses: [
+          ...(prev.roundGuesses ?? []),
+          {
+            guesserId: data.guesserId,
+            guess: data.guess,
+            matched: data.matched,
+            matchedPlayerIds: data.matchedPlayerIds,
+          },
+        ],
       }));
     });
 
