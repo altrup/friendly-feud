@@ -91,7 +91,7 @@ export async function checkGuessMatchBatch(
         role: "user",
         content:
           `You are judging a Family Feud game. For each candidate answer below, decide if it is semantically equivalent to the player's guess. ` +
-          `Ignore typos, different grammatical forms (e.g. "gaming" vs "play games"), and allow broad synonyms or categories and focus solely on the core intent.\n\n` +
+          `Ignore typos, different grammatical forms (e.g. "gaming" vs "play games"), and focus solely on the core intent.\n\n` +
           `Question: "${question}"\nPlayer's guess: "${guess}"\n\nCandidate answers:\n${pairs}\n\n` +
           `Reply with exactly one line per candidate in the format "1: yes" or "1: no", nothing else.`,
       },
