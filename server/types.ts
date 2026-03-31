@@ -10,7 +10,7 @@ export type GamePhase =
   | "game_end";
 
 export interface Player {
-  id: string; // socket ID
+  id: string; // sessionId
   name: string;
   isHost: boolean;
   isBot?: boolean;
@@ -34,9 +34,9 @@ export interface ClientGameState {
   currentRound: number;
   currentQuestion: Question | null;
   currentGuesserSessionId: string | null;
-  /** Socket IDs of players who have submitted their answer (not the answers themselves) */
+  /** sessionIds of players who have submitted their answer (not the answers themselves) */
   answeredPlayerIds: string[];
-  /** Which answers have already been matched (socket IDs of matched players) */
+  /** Which answers have already been matched (sessionIds of matched players) */
   matchedPlayerIds: string[];
   /** Unix ms timestamp when the answering phase ends; null outside answering phase */
   answerDeadline: number | null;
@@ -48,6 +48,7 @@ export interface ClientGameState {
   revealedAnswers: Record<string, string>;
   /** All guesses made so far this round; empty outside guessing phase */
   guessHistory: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[];
+  scoreDeltas: Record<string, number>;
 }
 
 // ─── Socket Event Payload Types ───────────────────────────────────────────────
@@ -62,7 +63,6 @@ export interface GuessResultPayload {
   matchedPlayerIds: string[];
   /** playerId → answer text for every matched player */
   matchedAnswers: Record<string, string>;
-  scoreDeltas: Record<string, number>;
 }
 
 export interface RoundEndPayload {

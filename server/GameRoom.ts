@@ -403,6 +403,7 @@ export class GameRoom {
                 .map((id) => [id, this.answers.get(id)!]),
             ),
       guessHistory: [...this.guessHistory],
+      scoreDeltas: Object.fromEntries(this.roundScoreDeltas),
     };
   }
 

@@ -172,7 +172,6 @@ export function registerSocketHandlers(
         matchedAnswers: Object.fromEntries(
           result.matchedIds.map((id) => [id, room.answers.get(id)!])
         ),
-        scoreDeltas: Object.fromEntries(result.scoreDeltas),
       });
 
       if (room.allAnswersMatched()) {

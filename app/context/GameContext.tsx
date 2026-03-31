@@ -136,7 +136,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         roomState.guessHistory.length > 0
           ? roomState.guessHistory
           : prev.roundGuesses,
-      roundScoreDeltas: null,
+      roundScoreDeltas: roomState.scoreDeltas,
       lastGuessResult: null,
       error: null,
     }));
@@ -162,7 +162,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
 
     myNameRef.current = session.playerName;
-    setState((prev) => ({ ...prev, myName: session.playerName, sessionId: session.sessionId }));
+    setState((prev) => ({
+      ...prev,
+      myName: session.playerName,
+      sessionId: session.sessionId,
+    }));
 
     const doRejoin = () => {
       socket.emit("rejoin_session", {
@@ -318,7 +322,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         phase: "game_end",
         scores: data.scores,
         gameEnd: data,
-        sessionId: null
+        sessionId: null,
       }));
     });
 
