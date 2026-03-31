@@ -45,13 +45,15 @@ export default function GameRoute() {
   return (
     <main className="min-h-screen bg-game-bg flex flex-col lg:flex-row">
       {/* Score sidebar — rendered first in DOM so it appears above main content on mobile.
-          On lg screens, order-2 pushes it to the right side. */}
+          On lg screens, order-2 pushes it to the right side.
+          collapsible enables the toggle arrow inside the ScoreBoard header on small screens. */}
       {showSidebar && (
         <aside className="lg:w-64 lg:order-2 p-6 pt-6">
           <ScoreBoard
             players={state.players}
             scores={state.scores}
             currentPlayerId={state.sessionId}
+            collapsible
           />
         </aside>
       )}

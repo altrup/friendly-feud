@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Player } from "../../server/types.js";
 
 interface Props {
@@ -8,9 +9,12 @@ interface Props {
   roundScoreDeltas?: Record<string, number> | null;
   /** All guesses from the round, used to show what each player guessed */
   roundGuesses?: { guesserId: string; guess: string; matched: boolean; matchedPlayerIds: string[] }[] | null;
+  /** When true, shows a collapse arrow on small screens (hidden on lg+) */
+  collapsible?: boolean;
 }
 
-export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas, roundGuesses }: Props) {
+export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas, roundGuesses, collapsible }: Props) {
+  const [open, setOpen] = useState(false);
   // Sort by score descending, alphabetical tiebreaker
   const sorted = [...players].sort((a, b) => {
     const scoreDiff = (scores[b.id] ?? 0) - (scores[a.id] ?? 0);
@@ -27,11 +31,28 @@ export function ScoreBoard({ players, scores, currentPlayerId, roundScoreDeltas,
   }
 
   return (
-    <div className="bg-game-surface border border-game-border rounded-xl p-4">
-      <h3 className="text-game-muted text-xs font-semibold uppercase tracking-widest mb-3">
+    <div
+      className={`bg-game-surface border border-game-border rounded-xl p-4 ${collapsible ? "max-lg:cursor-pointer" : ""}`}
+      onClick={collapsible ? () => setOpen((o) => !o) : undefined}
+    >
+      <h3
+        className={`text-game-muted text-xs font-semibold uppercase tracking-widest flex items-center gap-2 ${collapsible ? "mb-0 lg:mb-3" : "mb-3"}`}
+      >
+        {/* Arrow only shown on small screens when collapsible */}
+        {collapsible && (
+          <svg
+            className={`w-3 h-3 transition-transform lg:hidden ${open ? "rotate-90" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        )}
         Scores
       </h3>
-      <ul className="flex flex-col gap-1">
+      <ul className={`flex flex-col gap-1 ${collapsible ? `mt-3 ${open ? "" : "hidden"} lg:flex` : ""}`}>
         {sorted.map((player, i) => {
           const delta = roundScoreDeltas?.[player.id];
           const guesses = guessesByPlayer.get(player.id) ?? [];
