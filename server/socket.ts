@@ -72,7 +72,6 @@ export function registerSocketHandlers(
     // ─── rejoin_session ────────────────────────────────────────────────────────
     socket.on("rejoin_session", ({ sessionId: oldSessionId, roomCode }) => {
       const room = gameManager.getRoom(roomCode);
-      console.log(room?.players, oldSessionId);
       if (!room || !room.hasPlayer(oldSessionId)) {
         socket.emit("session_expired");
         return;
