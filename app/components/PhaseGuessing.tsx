@@ -13,6 +13,8 @@ export function PhaseGuessing() {
     text: string;
   } | null>(null);
 
+  const [isJudging, setIsJudging] = useState(false);
+
   const isMyTurn = state.currentGuesserSessionId === state.sessionId;
   const currentGuesser = state.players.find(
     (p) => p.id === state.currentGuesserSessionId
@@ -22,6 +24,7 @@ export function PhaseGuessing() {
   useEffect(() => {
     if (!state.lastGuessResult) return;
     const r = state.lastGuessResult;
+    setIsJudging(false);
     if (r.matched && r.matchedPlayerIds.length) {
       setFlashResult({ correct: true, text: `✓ "${r.matchedAnswer}" — matched!` });
     } else {
@@ -36,6 +39,9 @@ export function PhaseGuessing() {
     if (guess.trim() && isMyTurn) {
       submitGuess(guess.trim());
       setGuess("");
+      setIsJudging(true);
+      // Re-enable after 10s in case the server never responds
+      setTimeout(() => setIsJudging(false), 10_000);
     }
   }
 
@@ -110,10 +116,10 @@ export function PhaseGuessing() {
             />
             <button
               type="submit"
-              disabled={!guess.trim()}
+              disabled={!guess.trim() || isJudging}
               className="bg-game-accent hover:bg-game-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg px-5 py-2 transition-colors"
             >
-              Guess
+              {isJudging ? "Judging…" : "Guess"}
             </button>
           </form>
         </div>
